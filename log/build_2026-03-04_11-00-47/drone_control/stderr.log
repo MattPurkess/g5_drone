@@ -1,0 +1,5 @@
+  File "/home/matt/group5_drone_ws/install/drone_control/lib/python3.12/site-packages/drone_control/takeoff_land.py", line 75
+    self.set_mode_client.call(custom_mode) = 'OFFBOARD'
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: cannot assign to function call here. Maybe you meant '==' instead of '='?
+
