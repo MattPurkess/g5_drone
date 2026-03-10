@@ -1,31 +1,29 @@
-# How to run drone + control package 
+# How to run drone + manual control package 
 
-Navigate to PX4 Firmware directory
+Terminal 1: Launch PX4 gazebo simulation
 --
 cd ~/PX4-Autopilot
+make px4_sitl gz_x500
 
-Launch PX4 with Gazebo 
+Terminal 2: Launch MAVROS 
 --
-make px4_sitl gazebo
+ros2 run mavros mavros_node \
+  --ros-args -p fcu_url:=udp://:14540@localhost:14557
 
-Start up QGroundControl
+Terminal 3: Start up QGroundControl
 --
 chmod +x ./QGroundControl.AppImage 
-
 ./QGroundControl.AppImage
 
-Source your ROS 2 workspace
+Terminal 4: Run the manual control ROS 2 node
 --
-source ~/ros2_ws/install/setup.bash
-
-Launch MAVROS 
---
-ros2 launch mavros mavros_launch.py 
-
-Source workspace
---
-source ~/ros2_ws/install/setup.bash
-
-Launch the manual control node
---
+cd ~/g5_drone
+source install/setup.bash
 ros2 run drone_control takeoff_land
+
+Terminal 5 (optional): Check mavros status
+--
+ros2 topic echo /mavros/status
+
+
+
