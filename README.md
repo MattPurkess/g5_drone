@@ -10,7 +10,8 @@ make px4_sitl gazebo
 
 Start up QGroundControl
 --
--- not sure of command --
+chmod +x ./QGroundControl.AppImage
+./QGroundControl.AppImage
 
 Source your ROS 2 workspace
 --
