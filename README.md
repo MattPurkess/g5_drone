@@ -2,8 +2,8 @@
 
 Terminal 1: Launch PX4 gazebo simulation
 --
-cd ~/PX4-Autopilot
-make px4_sitl gz_x500
+cd ~/PX4-Autopilot \
+make px4_sitl gz_x500 
 
 Terminal 2: Launch MAVROS 
 --
@@ -12,13 +12,13 @@ ros2 run mavros mavros_node \
 
 Terminal 3: Start up QGroundControl
 --
-chmod +x ./QGroundControl.AppImage 
+chmod +x ./QGroundControl.AppImage \
 ./QGroundControl.AppImage
 
 Terminal 4: Run the manual control ROS 2 node
 --
-cd ~/g5_drone
-source install/setup.bash
+cd ~/g5_drone \
+source install/setup.bash \
 ros2 run drone_control takeoff_land
 
 Terminal 5 (optional): Check mavros status
