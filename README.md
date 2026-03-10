@@ -21,7 +21,11 @@ cd ~/g5_drone \
 source install/setup.bash \
 ros2 run drone_control takeoff_land
 
-Terminal 5 (optional): Check mavros status
+Terminal 5: Start teleop keyboard node
+--
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+
+Terminal 6 (optional): Check mavros status
 --
 ros2 topic echo /mavros/status
 
