@@ -1,6 +1,7 @@
-How to run drone + control package 
+# How to run drone + control package 
+
+Navigate to PX4 Firmware directory
 --
-# Navigate to PX4 Firmware directory
 cd ~/PX4-Autopilot
 
 # Launch PX4 with Gazebo Classic (replace 'iris' with desired drone model)
