@@ -7,13 +7,13 @@ make px4_sitl gz_x500
 
 Terminal 2: Launch MAVROS 
 --
-ros2 run mavros mavros_node \
+ros2 run mavros mavros_node \\ \
   --ros-args -p fcu_url:=udp://:14540@localhost:14557
 
 Terminal 3: Start up QGroundControl
 --
-chmod +x ./QGroundControl.AppImage \
-./QGroundControl.AppImage
+chmod +x ./QGroundControl-x86_64.AppImage \
+./QGroundControl-x86_64.AppImage
 
 Terminal 4: Run the manual control ROS 2 node
 --
