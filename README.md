@@ -34,14 +34,14 @@ Terminal 5: Start teleop keyboard node
 ```
 ros2 run teleop_twist_keyboard teleop_twist_keyboard  
 ```
-Use holonomic mode (caps) to control NSEW movement.
-t  = up
-b = down  
+Use holonomic mode (caps) to control NSEW movement.  
+> t  = up  
+> b = down  
 
 Terminal 6 (optional): Check mavros status
 --
 ```
-ros2 topic echo /mavros/status
+ros2 topic echo /mavros/state
 ```
 
 
