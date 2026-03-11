@@ -25,8 +25,8 @@ Terminal 4: Run the manual control ROS 2 node
 --
 ```
 cd ~/g5_drone
-source install/setup.bash 
 colcon build
+source install/setup.bash 
 ros2 run drone_control takeoff_land  
 ```
 Use keyboard inputs to control arming and disarming.
