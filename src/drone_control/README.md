@@ -4,9 +4,10 @@ This ROS2 package provides takeoff, landing, and teleoperation control for drone
 
 ## Features
 
-- Automatic takeoff to a specified hover altitude
+- Automatic arming and takeoff to a specified hover altitude when prompted
 - Teleoperation control via `/cmd_vel` topic
 - Up/Down movement functionality
+- Automatic landing and disarming when prompted
 
 ## Topics
 
@@ -28,7 +29,7 @@ This ROS2 package provides takeoff, landing, and teleoperation control for drone
    ros2 run drone_control takeoff_land
    ```
 
-2. The drone will automatically take off to 5m altitude and enter teleop mode.
+2. The option to arm the drone and takeoff using "a" will be given. After pressing "a", the drone will automatically take off to 5m altitude and enter teleop mode.
 
 3. Use the following commands for up/down control:
 
@@ -56,6 +57,8 @@ This ROS2 package provides takeoff, landing, and teleoperation control for drone
    ```bash
    ros2 service call /stop_vertical std_srvs/Trigger
    ```
+
+4. To land and disarm the drone, press "d" within the terminal. This will automatically land the drone using AUTO.LAND mode and then disarm the drone.
 
 ## Teleoperation
 
