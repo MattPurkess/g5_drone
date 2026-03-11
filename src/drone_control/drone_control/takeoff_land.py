@@ -199,8 +199,8 @@ class OffboardTakeoffTeleop(Node):
     def _publish_vel_setpoint(self):
         out = Twist()
         if (time.time() - self.user_cmd_time) <= self.cmd_timeout:
-            out.linear.x = float(self.user_cmd.linear.x)
-            out.linear.y = float(self.user_cmd.linear.y)
+            out.linear.x = float(self.user_cmd.linear.y) * -1.0
+            out.linear.y = float(self.user_cmd.linear.x)
             out.linear.z = float(self.user_cmd.linear.z)
             out.angular.z = float(self.user_cmd.angular.z)
         self.sp_vel_pub.publish(out)
