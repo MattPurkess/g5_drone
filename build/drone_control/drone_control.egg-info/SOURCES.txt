@@ -11,7 +11,9 @@ setup.py
 ../../build/drone_control/drone_control.egg-info/zip-safe
 drone_control/__init__.py
 drone_control/takeoff_land.py
+launch/sim.launch.py
 resource/drone_control
 test/test_copyright.py
 test/test_flake8.py
 test/test_pep257.py
+worlds/lawn.sdf

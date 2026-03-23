@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+import sys
+import tty
+import termios
+import select
 import time
 import threading
 
@@ -9,8 +13,6 @@ from rclpy.qos import qos_profile_sensor_data
 from geometry_msgs.msg import PoseStamped, Twist
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool, SetMode
-from std_srvs.srv import Trigger
-from std_msgs.msg import Float32
 
 
 class OffboardTakeoffTeleop(Node):
@@ -30,6 +32,11 @@ class OffboardTakeoffTeleop(Node):
         self.cmd_timeout = 9999.0
 
         self.mode = 'HOVER'  # HOVER or TELEOP
+        self.GROUND_ALT_THRESHOLD = 0.5  # meters
+        self._pending_action = None  # 'arm' or 'disarm', processed by main loop
+
+        self.hover_x = 0.0
+        self.hover_y = 0.0
 
         self.state_sub = self.create_subscription(
             State, '/mavros/state', self._state_cb, qos_profile_sensor_data
@@ -52,19 +59,16 @@ class OffboardTakeoffTeleop(Node):
         self.arming_client = self.create_client(CommandBool, '/mavros/cmd/arming')
         self.set_mode_client = self.create_client(SetMode, '/mavros/set_mode')
 
-        # Add up/down subscribers and service
-        self.move_up_sub = self.create_subscription(Float32, 'move_up', self._move_up_cb, 10)
-        self.move_down_sub = self.create_subscription(Float32, 'move_down', self._move_down_cb, 10)
-        self.set_vertical_velocity_sub = self.create_subscription(Float32, 'set_vertical_velocity', self._set_vertical_velocity_cb, 10)
-        self.stop_vertical_srv = self.create_service(Trigger, 'stop_vertical', self._stop_vertical_cb)
-
         self._stop = threading.Event()
         self._pub_thread = threading.Thread(target=self._publisher_loop, daemon=True)
         self._pub_thread.start()
+        self._key_thread = threading.Thread(target=self._keyboard_loop, daemon=True)
+        self._key_thread.start()
 
     def destroy(self):
         self._stop.set()
         self._pub_thread.join(timeout=1.0)
+        self._key_thread.join(timeout=1.0)
         self.destroy_node()
 
     def _state_cb(self, msg):
@@ -78,94 +82,91 @@ class OffboardTakeoffTeleop(Node):
         self.user_cmd = msg
         self.user_cmd_time = time.time()
 
-    def _move_up_cb(self, msg):
-        """Move up by the specified distance (meters)"""
-        distance = msg.data
-        if distance <= 0:
-            self.get_logger().warn("Distance must be positive")
+    def _keyboard_loop(self):
+        """Read single keypresses from the terminal to listen for arm and disarm commands"""
+        try:
+            fd = sys.stdin.fileno()
+        except Exception:
+            self.get_logger().error("No terminal available for keyboard input")
             return
-        
-        target_alt = self.pose.pose.position.z + distance
-        self.get_logger().info(f"Moving up to {target_alt:.2f} m")
-        
-        # Temporarily switch to position control for precise movement
-        original_mode = self.mode
-        self.mode = 'HOVER'
-        
-        # Update hover altitude
-        self.hover_alt = target_alt
-        
-        # Wait for movement to complete
-        timeout = 10.0  # seconds
+        old_settings = termios.tcgetattr(fd)
+        try:
+            # keep single-key reads without breaking terminal output formatting
+            tty.setcbreak(fd)
+            while not self._stop.is_set() and rclpy.ok():
+                try:
+                    if select.select([sys.stdin], [], [], 0.1)[0]:
+                        key = sys.stdin.read(1)
+                        if key == 'a':
+                            self._pending_action = 'arm'
+                        elif key == 'd':
+                            self._pending_action = 'disarm'
+                        elif key == '\x03':  # Ctrl-C
+                            self._stop.set()
+                            break
+                except Exception:
+                    break
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+    def _arm_drone(self):
+        """Arm the drone and take off to specified hover altitude"""
+        if self.state.armed:
+            self.get_logger().error("Arming Error: drone is already armed")
+            return
+
+        if self.have_pose and self.pose.pose.position.z > self.GROUND_ALT_THRESHOLD:
+            self.get_logger().error("Arming Error: drone is not on the ground")
+            return
+
+        self.get_logger().info("Setting OFFBOARD mode...")
+        if not self.set_mode('OFFBOARD'):
+            self.get_logger().error("Arming Error: could not set OFFBOARD mode")
+            return
+
+        self.get_logger().info("Arming...")
+        if not self.arm(True):
+            self.get_logger().error("Arming Error: could not arm drone")
+            return
+
+        # Take off from current position — only change Z value
+        self.hover_x = self.pose.pose.position.x
+        self.hover_y = self.pose.pose.position.y
+        self.get_logger().info(f"Arming Successful: Climbing to {self.hover_alt}m from ({self.hover_x:.2f}, {self.hover_y:.2f})...")
+        timeout = 30.0
         start_time = time.time()
         while rclpy.ok() and (time.time() - start_time) < timeout:
             rclpy.spin_once(self, timeout_sec=0.1)
-            if abs(self.pose.pose.position.z - target_alt) < 0.3:
+            if abs(self.pose.pose.position.z - self.hover_alt) < 0.3:
                 break
-        
-        self.mode = original_mode
-        self.get_logger().info(f"At altitude: {self.pose.pose.position.z:.2f} m")
 
-    def _move_down_cb(self, msg):
-        """Move down by the specified distance (meters)"""
-        distance = msg.data
-        if distance <= 0:
-            self.get_logger().warn("Distance must be positive")
+        self.get_logger().info("At altitude. Teleop enabled")
+        self.mode = 'TELEOP'
+
+    def _disarm_drone(self):
+        """Land the drone at its current position using AUTO.LAND and then disarm"""
+        if not self.state.armed:
+            self.get_logger().error("Disarming Error: drone is already disarmed")
             return
-        
-        target_alt = max(0.5, self.pose.pose.position.z - distance)  # Don't go below 0.5m
-        self.get_logger().info(f"Moving down to {target_alt:.2f} m")
-        
-        # Temporarily switch to position control for precise movement
-        original_mode = self.mode
-        self.mode = 'HOVER'
-        
-        # Update hover altitude
-        self.hover_alt = target_alt
-        
-        # Wait for movement to complete
-        timeout = 10.0  # seconds
+
+        self.get_logger().info(f"Drone is at {self.pose.pose.position.z:.2f} m — switching to AUTO.LAND...")
+
+        if not self.set_mode('AUTO.LAND'):
+            self.get_logger().error("Landing Error: failed to set AUTO.LAND mode")
+            return
+
+        # Wait for the flight controller to detect landing
+        timeout = 60.0
         start_time = time.time()
         while rclpy.ok() and (time.time() - start_time) < timeout:
             rclpy.spin_once(self, timeout_sec=0.1)
-            if abs(self.pose.pose.position.z - target_alt) < 0.3:
-                break
-        
-        self.mode = original_mode
-        self.get_logger().info(f"At altitude: {self.pose.pose.position.z:.2f} m")
+            if not self.state.armed:
+                # PX4 auto-disarmed after landing
+                self.mode = 'HOVER'
+                self.get_logger().info("Landing Successful: Drone landed and disarmed successfully")
+                return
 
-    def _set_vertical_velocity_cb(self, msg):
-        """Set vertical velocity (positive = up, negative = down)"""
-        velocity = msg.data
-        self.get_logger().info(f"Setting vertical velocity to {velocity:.2f} m/s")
-        
-        # Create a twist message with only vertical velocity
-        vel_cmd = Twist()
-        vel_cmd.linear.z = velocity
-        
-        # Publish immediately and set as user command
-        self.user_cmd = vel_cmd
-        self.user_cmd_time = time.time()
-        self.sp_vel_pub.publish(vel_cmd)
-
-    def _stop_vertical_cb(self, request, response):
-        """Stop vertical movement"""
-        self.get_logger().info("Stopping vertical movement")
-        
-        # Set vertical velocity to 0
-        vel_cmd = Twist()
-        vel_cmd.linear.x = self.user_cmd.linear.x
-        vel_cmd.linear.y = self.user_cmd.linear.y
-        vel_cmd.linear.z = 0.0  # Stop vertical movement
-        vel_cmd.angular.z = self.user_cmd.angular.z
-        
-        self.user_cmd = vel_cmd
-        self.user_cmd_time = time.time()
-        self.sp_vel_pub.publish(vel_cmd)
-        
-        response.success = True
-        response.message = "Vertical movement stopped"
-        return response
+        self.get_logger().error("Landing Error: Landing timed out")
 
     def _call_service(self, client, req, timeout_sec=5.0):
         if not client.wait_for_service(timeout_sec=3.0):
@@ -190,8 +191,8 @@ class OffboardTakeoffTeleop(Node):
         sp = PoseStamped()
         sp.header.stamp = self.get_clock().now().to_msg()
         sp.header.frame_id = 'map'
-        sp.pose.position.x = 0.0
-        sp.pose.position.y = 0.0
+        sp.pose.position.x = float(self.hover_x)
+        sp.pose.position.y = float(self.hover_y)
         sp.pose.position.z = float(self.hover_alt)
         sp.pose.orientation.w = 1.0
         self.sp_pos_pub.publish(sp)
@@ -199,8 +200,8 @@ class OffboardTakeoffTeleop(Node):
     def _publish_vel_setpoint(self):
         out = Twist()
         if (time.time() - self.user_cmd_time) <= self.cmd_timeout:
-            out.linear.x = float(self.user_cmd.linear.x)
-            out.linear.y = float(self.user_cmd.linear.y)
+            out.linear.x = float(self.user_cmd.linear.y) * -1.0
+            out.linear.y = float(self.user_cmd.linear.x)
             out.linear.z = float(self.user_cmd.linear.z)
             out.angular.z = float(self.user_cmd.angular.z)
         self.sp_vel_pub.publish(out)
@@ -228,24 +229,15 @@ class OffboardTakeoffTeleop(Node):
         while rclpy.ok() and (time.time() - t0) < 2.0:
             rclpy.spin_once(self, timeout_sec=0.1)
 
-        self.get_logger().info("Setting OFFBOARD...")
-        if not self.set_mode('OFFBOARD'):
-            self.get_logger().error("OFFBOARD request failed.")
-            return
+        self.get_logger().info("Ready. Press 'a' to arm and takeoff, 'd' to land and disarm.")
 
-        self.get_logger().info("Arming...")
-        if not self.arm(True):
-            self.get_logger().error("Arming failed.")
-            return
-
-        self.get_logger().info(f"Climbing to {self.hover_alt} m...")
-        while rclpy.ok() and abs(self.pose.pose.position.z - self.hover_alt) > 0.3:
-            rclpy.spin_once(self, timeout_sec=0.1)
-
-        self.get_logger().info("At altitude. Teleop enabled")
-        self.mode = 'TELEOP'
-
-        while rclpy.ok():
+        while rclpy.ok() and not self._stop.is_set():
+            if self._pending_action == 'arm':
+                self._pending_action = None
+                self._arm_drone()
+            elif self._pending_action == 'disarm':
+                self._pending_action = None
+                self._disarm_drone()
             rclpy.spin_once(self, timeout_sec=0.1)
 
 
