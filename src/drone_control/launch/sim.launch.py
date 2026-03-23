@@ -31,4 +31,13 @@ def generate_launch_description():
             parameters=[{'fcu_url': 'udp://:14540@localhost:14557'}],
             output='screen'
         ),
+        
+        ExecuteProcess(
+            cmd=[
+                'gnome-terminal', '--',
+                'bash', '-c',
+                '~/QGroundControl-x86_64.AppImage; exec bash'
+            ],
+            output='screen'
+        )
     ])
