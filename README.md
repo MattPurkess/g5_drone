@@ -1,52 +1,31 @@
-## How to run drone + manual control package 
+# Drone Control Package
 
-Terminal 1: Launch PX4 gazebo simulation
---
-```
-cd ~/PX4-Autopilot  
-make px4_sitl gz_x500 
-```
+## Usage
 
-Terminal 2: Launch MAVROS 
---
+1. Build the workspace and source it:
 ```
-ros2 run mavros mavros_node \  
---ros-args -p fcu_url:=udp://:14540@localhost:14557
+   cd ~/group5_drone_ws
+   colcon build
+   source install/setup.bash
 ```
 
-Terminal 3: Start up QGroundControl
---
+2. Launch the simulation:
 ```
-chmod +x ./QGroundControl-x86_64.AppImage  
-./QGroundControl-x86_64.AppImage
+ros2 launch drone_control sim.launch.py
 ```
+This launches the Gazebo world, PX4, QGroundControl and MAVROS
 
-Terminal 4: Run the manual control ROS 2 node
---
+3. In a separate terminal run the manual control node:
 ```
-cd ~/g5_drone
-colcon build
-source install/setup.bash 
-ros2 run drone_control takeoff_land  
+ros2 run drone_control takeoff_land
 ```
-Use keyboard inputs to control arming and disarming.
-> a = arm and takeoff
-> d = land and disarm
+In the control terminal:
+Press a to arm and take off
+Press d to land and disarm
 
-Terminal 5: Start teleop keyboard node
---
+4. Use the teleop in another terminal to move the drone
 ```
-ros2 run teleop_twist_keyboard teleop_twist_keyboard  
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
-Use holonomic mode (caps) to control NSEW movement.  
-> t  = up  
-> b = down  
-
-Terminal 6 (optional): Check mavros status
---
-```
-ros2 topic echo /mavros/state
-```
-
-
+Use "Holonomic mode" (caps lock) to control the drone's NSEW movement
 
