@@ -13,7 +13,7 @@
 ```
 ros2 launch drone_control sim.launch.py
 ```
-This launches the Gazebo world, PX4, QGroundControl and MAVROS
+This launches the Gazebo world, PX4, QGroundControl, MAVROS and RViz2
 
 3. In a separate terminal run the manual control node:
 ```
