@@ -4,7 +4,7 @@
 
 1. Build the workspace and source it:
 ```
-   cd ~/group5_drone_ws
+   cd ~/g5_drone
    colcon build
    source install/setup.bash
 ```
@@ -17,6 +17,8 @@ This launches the Gazebo world, PX4, QGroundControl, MAVROS and RViz2
 
 3. In a separate terminal run the manual control node:
 ```
+cd ~/g5_drone
+source install/setup.bash
 ros2 run drone_control takeoff_land
 ```
 In the control terminal:
