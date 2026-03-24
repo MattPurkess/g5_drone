@@ -6,6 +6,8 @@
 /home/matt/group5_drone_ws/install/drone_control/share/drone_control/package.xml
 /home/matt/group5_drone_ws/install/drone_control/share/drone_control/launch/sim.launch.py
 /home/matt/group5_drone_ws/install/drone_control/share/drone_control/worlds/lawn.sdf
+/home/matt/group5_drone_ws/install/drone_control/share/drone_control/config/mavros_params.yaml
+/home/matt/group5_drone_ws/install/drone_control/share/drone_control/config/rviz_config.rviz
 /home/matt/group5_drone_ws/install/drone_control/lib/python3.12/site-packages/drone_control-0.0.0-py3.12.egg-info/SOURCES.txt
 /home/matt/group5_drone_ws/install/drone_control/lib/python3.12/site-packages/drone_control-0.0.0-py3.12.egg-info/entry_points.txt
 /home/matt/group5_drone_ws/install/drone_control/lib/python3.12/site-packages/drone_control-0.0.0-py3.12.egg-info/PKG-INFO

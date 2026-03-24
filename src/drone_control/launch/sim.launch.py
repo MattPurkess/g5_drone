@@ -7,6 +7,8 @@ import os
 def generate_launch_description():
     pkg_share = get_package_share_directory('drone_control')
     worlds_path = os.path.join(pkg_share, 'worlds')
+    mavros_params = os.path.join(pkg_share, 'config', 'mavros_params.yaml')
+    rviz_config = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
 
     return LaunchDescription([
         SetEnvironmentVariable(
@@ -28,7 +30,14 @@ def generate_launch_description():
         Node(
             package='mavros',
             executable='mavros_node',
-            parameters=[{'fcu_url': 'udp://:14540@localhost:14557'}],
+            parameters=[mavros_params],
+            output='screen'
+        ),
+        
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            arguments=['-d', rviz_config],
             output='screen'
         ),
         

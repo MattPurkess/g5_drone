@@ -9,6 +9,8 @@ setup.py
 ../../build/drone_control/drone_control.egg-info/requires.txt
 ../../build/drone_control/drone_control.egg-info/top_level.txt
 ../../build/drone_control/drone_control.egg-info/zip-safe
+config/mavros_params.yaml
+config/rviz_config.rviz
 drone_control/__init__.py
 drone_control/takeoff_land.py
 launch/sim.launch.py

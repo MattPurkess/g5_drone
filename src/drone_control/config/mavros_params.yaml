@@ -1,0 +1,9 @@
+mavros_node:
+  ros__parameters:
+    fcu_url: "udp://:14540@localhost:14557"
+
+/mavros/local_position:
+  ros__parameters:
+    tf.send: true
+    tf.frame_id: "odom"
+    tf.child_frame_id: "base_link"
