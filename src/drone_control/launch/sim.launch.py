@@ -7,22 +7,40 @@ import os
 def generate_launch_description():
     pkg_share = get_package_share_directory('drone_control')
     worlds_path = os.path.join(pkg_share, 'worlds')
+    world_file = os.path.join(worlds_path, 'liverpool.sdf')
+    heightmaps_path = os.path.join(worlds_path, 'heightmaps')
+    textures_path = os.path.join(worlds_path, 'textures')
+
     mavros_params = os.path.join(pkg_share, 'config', 'mavros_params.yaml')
     rviz_config = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
+    bridge_config = os.path.join(pkg_share, 'config', 'gz_bridge_depth.yaml')
+
+    px4_worlds_dir = os.path.expanduser('~/PX4-Autopilot/Tools/simulation/gz/worlds')
 
     return LaunchDescription([
+        ExecuteProcess(
+            cmd=[
+                'bash', '-c',
+                f'mkdir -p {px4_worlds_dir} && '
+                f'ln -sfn {world_file} {px4_worlds_dir}/liverpool.sdf && '
+                f'ln -sfn {heightmaps_path} {px4_worlds_dir}/heightmaps && '
+                f'ln -sfn {textures_path} {px4_worlds_dir}/textures'
+            ],
+            output='screen'
+        ),
+
         SetEnvironmentVariable(
-            'GZ_SIM_RESOURCE_PATH',
-            worlds_path
+            name='GZ_SIM_RESOURCE_PATH',
+            value=worlds_path + ':' + os.environ.get('GZ_SIM_RESOURCE_PATH', '')
         ),
 
         ExecuteProcess(
             cmd=[
                 'bash', '-c',
                 'cd ~/PX4-Autopilot && '
-                'PX4_GZ_WORLD=lawn '
-                'PX4_SIM_MODEL=gz_x500 '
-                'make px4_sitl gz_x500'
+                'PX4_GZ_WORLD=liverpool '
+                'PX4_SIM_MODEL=gz_x500_depth '
+                'make px4_sitl gz_x500_depth'
             ],
             output='screen'
         ),
@@ -33,7 +51,15 @@ def generate_launch_description():
             parameters=[mavros_params],
             output='screen'
         ),
-        
+
+        Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            name='camera_bridge',
+            output='screen',
+            parameters=[{'config_file': bridge_config}],
+        ),
+
         Node(
             package='rviz2',
             executable='rviz2',

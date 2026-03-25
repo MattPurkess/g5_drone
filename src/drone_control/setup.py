@@ -15,6 +15,8 @@ setup(
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'worlds'), glob('worlds/*.sdf')),
         (os.path.join('share', package_name, 'config'), glob('config/*')),
+        (os.path.join('share', package_name, 'worlds', 'heightmaps'), glob('worlds/heightmaps/*')),
+        (os.path.join('share', package_name, 'worlds', 'textures'), glob('worlds/textures/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

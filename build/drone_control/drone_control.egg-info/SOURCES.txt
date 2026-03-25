@@ -9,6 +9,7 @@ setup.py
 ../../build/drone_control/drone_control.egg-info/requires.txt
 ../../build/drone_control/drone_control.egg-info/top_level.txt
 ../../build/drone_control/drone_control.egg-info/zip-safe
+config/gz_bridge_depth.yaml
 config/mavros_params.yaml
 config/rviz_config.rviz
 drone_control/__init__.py
@@ -19,3 +20,9 @@ test/test_copyright.py
 test/test_flake8.py
 test/test_pep257.py
 worlds/lawn.sdf
+worlds/liverpool.sdf
+worlds/heightmaps/liverpool.png
+worlds/textures/dirt_diffusespecular.png
+worlds/textures/flat_normal.png
+worlds/textures/fungus_diffusespecular.png
+worlds/textures/grass_diffusespecular.png
