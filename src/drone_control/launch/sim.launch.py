@@ -7,10 +7,10 @@ import os
 def generate_launch_description():
     pkg_share = get_package_share_directory('drone_control')
     worlds_path = os.path.join(pkg_share, 'worlds')
-    world_file = os.path.join(worlds_path, 'liverpool.sdf')
+    world_file = os.path.join(worlds_path, 'france.sdf')
     heightmaps_path = os.path.join(worlds_path, 'heightmaps')
-    textures_path = os.path.join(worlds_path, 'textures')
-
+    meshes_path = os.path.join(worlds_path, 'meshes')
+        
     mavros_params = os.path.join(pkg_share, 'config', 'mavros_params.yaml')
     rviz_config = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
     bridge_config = os.path.join(pkg_share, 'config', 'gz_bridge_depth.yaml')
@@ -22,9 +22,9 @@ def generate_launch_description():
             cmd=[
                 'bash', '-c',
                 f'mkdir -p {px4_worlds_dir} && '
-                f'ln -sfn {world_file} {px4_worlds_dir}/liverpool.sdf && '
+                f'ln -sfn {world_file} {px4_worlds_dir}/france.sdf && '
                 f'ln -sfn {heightmaps_path} {px4_worlds_dir}/heightmaps && '
-                f'ln -sfn {textures_path} {px4_worlds_dir}/textures'
+                f'ln -sfn {meshes_path} {px4_worlds_dir}/meshes'
             ],
             output='screen'
         ),
@@ -38,9 +38,9 @@ def generate_launch_description():
             cmd=[
                 'bash', '-c',
                 'cd ~/PX4-Autopilot && '
-                'PX4_GZ_WORLD=liverpool '
-                'PX4_SIM_MODEL=gz_x500_depth '
-                'make px4_sitl gz_x500_depth'
+                'PX4_GZ_WORLD=france '
+                'PX4_SIM_MODEL=gz_x500 '
+                'make px4_sitl gz_x500'
             ],
             output='screen'
         ),
