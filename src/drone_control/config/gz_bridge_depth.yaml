@@ -1,10 +1,10 @@
-- gz_topic_name: /world/liverpool/model/x500_depth_0/link/camera_link/sensor/IMX214/image
+- gz_topic_name: /world/france/model/x500_depth_0/link/camera_link/sensor/IMX214/image
   ros_topic_name: /x500/camera/image_raw
   gz_type_name: gz.msgs.Image
   ros_type_name: sensor_msgs/msg/Image
   direction: GZ_TO_ROS
 
-- gz_topic_name: /world/liverpool/model/x500_depth_0/link/camera_link/sensor/IMX214/camera_info
+- gz_topic_name: /world/france/model/x500_depth_0/link/camera_link/sensor/IMX214/camera_info
   ros_topic_name: /x500/camera/camera_info
   gz_type_name: gz.msgs.CameraInfo
   ros_type_name: sensor_msgs/msg/CameraInfo
