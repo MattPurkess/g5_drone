@@ -19,7 +19,6 @@ resource/drone_control
 test/test_copyright.py
 test/test_flake8.py
 test/test_pep257.py
-worlds/lawn.sdf
 worlds/liverpool.sdf
 worlds/heightmaps/liverpool.png
 worlds/textures/dirt_diffusespecular.png

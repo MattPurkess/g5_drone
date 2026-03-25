@@ -5,7 +5,6 @@
 /home/matt/group5_drone_ws/install/drone_control/share/ament_index/resource_index/packages/drone_control
 /home/matt/group5_drone_ws/install/drone_control/share/drone_control/package.xml
 /home/matt/group5_drone_ws/install/drone_control/share/drone_control/launch/sim.launch.py
-/home/matt/group5_drone_ws/install/drone_control/share/drone_control/worlds/lawn.sdf
 /home/matt/group5_drone_ws/install/drone_control/share/drone_control/worlds/liverpool.sdf
 /home/matt/group5_drone_ws/install/drone_control/share/drone_control/config/mavros_params.yaml
 /home/matt/group5_drone_ws/install/drone_control/share/drone_control/config/rviz_config.rviz
