@@ -15,6 +15,8 @@ setup(
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'worlds'), glob('worlds/*.sdf')),
         (os.path.join('share', package_name, 'worlds', 'meshes'), glob('worlds/meshes/*')),
+        (os.path.join('share', package_name, 'models', 'apriltag_landing_pad'), glob('../../models/apriltag_landing_pad/model.*')),
+        (os.path.join('share', package_name, 'models', 'apriltag_landing_pad', 'materials', 'textures'), glob('../../models/apriltag_landing_pad/materials/textures/*')),
         (os.path.join('share', package_name, 'config'), glob('config/*')),
     ],
     install_requires=['setuptools'],

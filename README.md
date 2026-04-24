@@ -31,3 +31,15 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 Use "Holonomic mode" (caps lock) to control the drone's NSEW movement
 
+
+# CMD's to install correct packages for apriltag
+### Python libraries
+pip3 install pupil-apriltags transformations Pillow numpy --break-system-packages
+
+### ROS2 AprilTag packages
+sudo apt install -y \
+  ros-jazzy-apriltag-ros \
+  ros-jazzy-apriltag-msgs \
+  ros-jazzy-tf-transformations \
+  ros-jazzy-tf2-geometry-msgs \
+  ros-jazzy-tf2-ros

@@ -11,6 +11,7 @@ def generate_launch_description():
     worlds_path = os.path.join(pkg_share, 'worlds')
     world_file = os.path.join(worlds_path, 'france.sdf')
     meshes_path = os.path.join(worlds_path, 'meshes')
+    models_path = os.path.join(pkg_share, 'models')
         
     mavros_params = os.path.join(pkg_share, 'config', 'mavros_params.yaml')
     rviz_config = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
@@ -24,7 +25,7 @@ def generate_launch_description():
 
         #~ Links to PX4
         #Make this for the drone model xx bc px4 launches gazebo
-        # - need camera foreawrd & camera downn - do this on x5000 depth
+        # - need camera forward & camera down - do this on x5000 depth (matt needs depth)
         
         ExecuteProcess(
             cmd=[
@@ -37,10 +38,28 @@ def generate_launch_description():
             output='screen'
         ),
 
+        #~ Get apriltag sdf for gazebo world
         SetEnvironmentVariable(
             name='GZ_SIM_RESOURCE_PATH',
-            value=worlds_path + ':' + os.environ.get('GZ_SIM_RESOURCE_PATH', '')
+            value=':'.join(
+                path for path in [
+                    worlds_path,
+                    models_path,
+                    os.environ.get('GZ_SIM_RESOURCE_PATH', '')
+                ] if path
+            )
         ),
+
+        SetEnvironmentVariable(
+            name='SDF_PATH',
+            value=':'.join(
+                path for path in [
+                    models_path,
+                    os.environ.get('SDF_PATH', '')
+                ] if path
+            )
+        ),
+        #~
 
         ExecuteProcess(
             cmd=[
