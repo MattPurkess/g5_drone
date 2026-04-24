@@ -5,6 +5,8 @@ from ament_index_python.packages import get_package_share_directory
 import os
 
 def generate_launch_description():
+
+    #~ Path defs
     pkg_share = get_package_share_directory('drone_control')
     worlds_path = os.path.join(pkg_share, 'worlds')
     world_file = os.path.join(worlds_path, 'france.sdf')
@@ -15,14 +17,22 @@ def generate_launch_description():
     bridge_config = os.path.join(pkg_share, 'config', 'gz_bridge_depth.yaml')
 
     px4_worlds_dir = os.path.expanduser('~/PX4-Autopilot/Tools/simulation/gz/worlds')
+    #~
+
 
     return LaunchDescription([
+
+        #~ Links to PX4
+        #Make this for the drone model xx bc px4 launches gazebo
+        # - need camera foreawrd & camera downn - do this on x5000 depth
+        
         ExecuteProcess(
             cmd=[
                 'bash', '-c',
-                f'mkdir -p {px4_worlds_dir} && '
-                f'ln -sfn {world_file} {px4_worlds_dir}/france.sdf && '
+                f'mkdir -p {px4_worlds_dir} && ' # world dest
+                f'ln -sfn {world_file} {px4_worlds_dir}/france.sdf && ' # links world to PX4 location
                 f'ln -sfn {meshes_path} {px4_worlds_dir}/meshes'
+                
             ],
             output='screen'
         ),
