@@ -31,6 +31,7 @@ setup(
     entry_points={
         'console_scripts': [
             'takeoff_land = drone_control.takeoff_land:main',
+            'waypoint_nav = drone_control.waypoint_nav:main',
         ],
     },
 )
