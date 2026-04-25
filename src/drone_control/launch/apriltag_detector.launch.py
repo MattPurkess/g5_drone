@@ -20,4 +20,16 @@ def generate_launch_description():
             parameters=[config],
             output='screen',
         ),
+        # cam to body transform
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='camera_to_body_tf',
+            # args: x y z  qx qy qz qw  parent_frame  child_frame
+            # cam is 5cm below CoM, rotated 90 deg around Y
+            arguments=['0', '0', '-0.05',
+                    '0', '0.7071', '0', '0.7071',
+                    'base_link', 'camera_down_link'],
+        ),
+        
     ])

@@ -18,8 +18,7 @@ import numpy as np
 from PIL import Image
 
 
-def generate_tag36h11(tag_id: int, image_size_px: int = 800,
-                       border_bits: int = 1) -> np.ndarray:
+def generate_tag36h11(tag_id: int, image_size_px: int = 800, border_bits: int = 1) -> np.ndarray:
     """
     Render Tag36h11 tag_id as a numpy uint8 image of shape (image_size_px, image_size_px).
     border_bits: number of quiet-zone cells around the tag (min 1).
@@ -45,9 +44,9 @@ def generate_tag36h11(tag_id: int, image_size_px: int = 800,
 
 def main():
     parser = argparse.ArgumentParser(description='Generate Tag36h11 AprilTag')
-    parser.add_argument('--id',   type=int, default=0,             help='Tag ID (0-586)')
-    parser.add_argument('--size', type=int, default=800,           help='Image size in pixels')
-    parser.add_argument('--out',  type=str, default='apriltag.png', help='Output PNG path')
+    parser.add_argument('--id', type=int, default=0, help='Tag ID (0-586)')
+    parser.add_argument('--size', type=int, default=800, help='Image size in pixels')
+    parser.add_argument('--out', type=str, default='apriltag.png', help='Output PNG path')
     args = parser.parse_args()
 
     img_array = generate_tag36h11(args.id, args.size)
