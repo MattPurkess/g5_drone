@@ -17,6 +17,9 @@ import cv2
 import numpy as np
 from PIL import Image
 
+## uses OpenCVs apriltag dict
+## Accepts a tag ID, pixel size, and output path
+## enforces Tag36h11 ID of range 0..586
 
 def generate_tag36h11(tag_id: int, image_size_px: int = 800, border_bits: int = 1) -> np.ndarray:
     """
@@ -26,6 +29,7 @@ def generate_tag36h11(tag_id: int, image_size_px: int = 800, border_bits: int = 
     if tag_id < 0 or tag_id >= 587:
         raise ValueError('tag_id must be in range 0..586 for tag36h11')
 
+    # draws 6x6 data pixel and 1 cell back border
     tag_cells = 8
     total_cells = tag_cells + 2 * border_bits
     cell_px = image_size_px // total_cells
@@ -49,6 +53,7 @@ def main():
     parser.add_argument('--out', type=str, default='apriltag.png', help='Output PNG path')
     args = parser.parse_args()
 
+    #saves tag as a png
     img_array = generate_tag36h11(args.id, args.size)
     img = Image.fromarray(img_array, mode='L').convert('RGB')
     img.save(args.out)
