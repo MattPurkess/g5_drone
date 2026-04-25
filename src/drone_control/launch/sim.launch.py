@@ -66,8 +66,8 @@ def generate_launch_description():
                 'bash', '-c',
                 'cd ~/PX4-Autopilot && '
                 'PX4_GZ_WORLD=france '
-                'PX4_SIM_MODEL=gz_x500_depth '
-                'make px4_sitl gz_x500_depth'
+                'PX4_SIM_MODEL=gz_x500_mono_cam_down '
+                'make px4_sitl gz_x500_mono_cam_down'
             ],
             output='screen'
         ),

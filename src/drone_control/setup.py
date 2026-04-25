@@ -17,6 +17,7 @@ setup(
         (os.path.join('share', package_name, 'worlds', 'meshes'), glob('worlds/meshes/*')),
         (os.path.join('share', package_name, 'models', 'apriltag_landing_pad'), glob('../../models/apriltag_landing_pad/model.*')),
         (os.path.join('share', package_name, 'models', 'apriltag_landing_pad', 'materials', 'textures'), glob('../../models/apriltag_landing_pad/materials/textures/*')),
+        (os.path.join('share', package_name, 'models', 'x500_downward_cam'), glob('../../models/x500_downward_cam/model.*')),
         (os.path.join('share', package_name, 'config'), glob('config/*')),
     ],
     install_requires=['setuptools'],

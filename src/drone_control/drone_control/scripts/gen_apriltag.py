@@ -11,11 +11,11 @@ Tag36h11 structure:
 
 #Generate one tag for each drone!!
 
-import numpy as np
-from PIL import Image
 import argparse
 
-from pupil_apriltags import Detector
+import cv2
+import numpy as np
+from PIL import Image
 
 
 def generate_tag36h11(tag_id: int, image_size_px: int = 800,
@@ -24,60 +24,23 @@ def generate_tag36h11(tag_id: int, image_size_px: int = 800,
     Render Tag36h11 tag_id as a numpy uint8 image of shape (image_size_px, image_size_px).
     border_bits: number of quiet-zone cells around the tag (min 1).
     """
-    det = Detector(families='tag36h11')
-    tf = det.tag_families['tag36h11']
-    fam = tf.contents
-    ncodes = int(fam.ncodes)
+    if tag_id < 0 or tag_id >= 587:
+        raise ValueError('tag_id must be in range 0..586 for tag36h11')
 
-    if tag_id >= ncodes:
-        raise ValueError(f'tag_id {tag_id} out of range (max {ncodes - 1})')
-
-    # Tag36h11 layout:
-    #   data_cells = 6  (6x6 = 36 data bits)
-    #   tag_cells  = 8  (6 data + 1-cell black border on each side)
-    #   total canvas cells = tag_cells + 2 * border_bits
-    data_cells  = 6
-    tag_cells   = 8
+    tag_cells = 8
     total_cells = tag_cells + 2 * border_bits
-    cell_px     = image_size_px // total_cells
-    img_px      = cell_px * total_cells
+    cell_px = image_size_px // total_cells
+    marker_px = cell_px * tag_cells
+    quiet_px = cell_px * border_bits
 
-    canvas = np.ones((img_px, img_px), dtype=np.uint8) * 255  # white background
-
-    # 1- Draw outer quiet-zone border (border_bits wide, black)
-    for bx in range(border_bits):
-        canvas[bx * cell_px:(bx + 1) * cell_px, :] = 0
-        canvas[img_px - (bx + 1) * cell_px:img_px - bx * cell_px, :] = 0
-        canvas[:, bx * cell_px:(bx + 1) * cell_px] = 0
-        canvas[:, img_px - (bx + 1) * cell_px:img_px - bx * cell_px] = 0
-
-    # 2-Draw mandatory 1-cell black border of the tag itself
-    offset       = border_bits          # cell index where the tag grid starts
-    tag_px_start = offset * cell_px
-    tag_px_end   = (offset + tag_cells) * cell_px
-
-    canvas[tag_px_start:tag_px_start + cell_px, tag_px_start:tag_px_end] = 0  # top
-    canvas[tag_px_end - cell_px:tag_px_end,     tag_px_start:tag_px_end] = 0  # bottom
-    canvas[tag_px_start:tag_px_end, tag_px_start:tag_px_start + cell_px] = 0  # left
-    canvas[tag_px_start:tag_px_end, tag_px_end - cell_px:tag_px_end]     = 0  # right
-
-    # 3- Draw 6x6 data bits from the 36-bit stored code
-    # fam.codes is a ctypes POINTER(c_ulong); convert to numpy array for safe indexing
-    codes_array = np.ctypeslib.as_array(fam.codes, shape=(ncodes,))
-    code         = int(codes_array[tag_id])
-    data_offset  = offset + 1           # skip the 1-cell black tag border
-    bit_index    = data_cells * data_cells - 1   # 35, MSB first
-
-    for row in range(data_cells):
-        for col in range(data_cells):
-            ry = (data_offset + row) * cell_px
-            rx = (data_offset + col) * cell_px
-            bit    = (code >> bit_index) & 1
-            colour = 255 if bit == 1 else 0   # white=1, black=0
-            canvas[ry:ry + cell_px, rx:rx + cell_px] = colour
-            bit_index -= 1
-
-    return canvas
+    dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_APRILTAG_36h11)
+    marker = cv2.aruco.drawMarker(dictionary, tag_id, marker_px)
+    return cv2.copyMakeBorder(
+        marker,
+        quiet_px, quiet_px, quiet_px, quiet_px,
+        cv2.BORDER_CONSTANT,
+        value=255,
+    )
 
 
 def main():
