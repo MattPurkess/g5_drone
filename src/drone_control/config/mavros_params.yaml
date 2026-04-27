@@ -1,9 +1,17 @@
-mavros_node:
+/**:
   ros__parameters:
+    use_sim_time: true
     fcu_url: "udp://:14540@localhost:14557"
 
 /mavros/local_position:
   ros__parameters:
-    tf.send: true
-    tf.frame_id: "odom"
-    tf.child_frame_id: "base_link"
+    frame_id: "odom"
+    tf:
+      send: true
+      frame_id: "odom"
+      child_frame_id: "base_link"
+      
+/mavros/global_position:
+  ros__parameters:
+    tf:
+      send: false
