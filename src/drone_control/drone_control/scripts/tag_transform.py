@@ -13,10 +13,18 @@ import numpy as np
 
 
 def detection_to_camera_pose(detection) -> PoseStamped:
-    """Convert a single AprilTagDetection into a PoseStamped in the camera_down_link frame."""
+    """Convert a single AprilTagDetection into a PoseStamped in the camera frame.
+
+    The Jazzy apriltag_msgs AprilTagDetection message provides a 2D centre
+    point instead of a full pose, so we map the detection centre into a
+    zero-height pose for downstream TF handling.
+    """
     pose_stamped = PoseStamped()
-    pose_stamped.header = detection.pose.header
-    pose_stamped.pose   = detection.pose.pose.pose
+    pose_stamped.header.frame_id = 'camera_down_link'
+    pose_stamped.pose.position.x = float(detection.centre.x)
+    pose_stamped.pose.position.y = float(detection.centre.y)
+    pose_stamped.pose.position.z = 0.0
+    pose_stamped.pose.orientation.w = 1.0
     return pose_stamped
 
 
