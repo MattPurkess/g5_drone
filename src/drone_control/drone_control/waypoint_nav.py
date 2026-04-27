@@ -30,10 +30,9 @@ except ImportError:
         sy = math.sin(yaw * 0.5)
         return [0.0, 0.0, sy, cy]  # [x, y, z, w]
 
-# Mission definition
-# Edit these waypoints freely.  Coordinates are ENU local frame:
+# Coordinates are ENU local frame:
 #   +X = East,  +Y = North,  +Z = Up
-#   Origin (0, 0, 0) = drone spawn point on the france.sdf platform.
+#   Origin (0, 0, 0) = drone spawn point in world
 #   yaw is in radians: 0 = face East, pi/2 = face North
 
 @dataclass
@@ -70,12 +69,12 @@ class WaypointNavNode(Node):
     def __init__(self):
         super().__init__('waypoint_nav_node')
 
-        # ── state ────────────────────────────────────────────────────────────
+        # state ────────────────────────────────────────────────────────────
         self.mavros_state = State()
         self.current_pose = PoseStamped()
         self.have_pose    = False
 
-        # ── subscribers ──────────────────────────────────────────────────────
+        # subscribers ──────────────────────────────────────────────────────
         self.create_subscription(
             State, '/mavros/state',
             lambda m: setattr(self, 'mavros_state', m),
@@ -87,23 +86,23 @@ class WaypointNavNode(Node):
             qos_profile_sensor_data,
         )
 
-        # ── publishers ───────────────────────────────────────────────────────
+        # publishers ───────────────────────────────────────────────────────
         self.sp_pub = self.create_publisher(
             PoseStamped, '/mavros/setpoint_position/local', 10
         )
 
-        # ── service clients ──────────────────────────────────────────────────
+        # service clients ──────────────────────────────────────────────────
         self.arm_client  = self.create_client(CommandBool, '/mavros/cmd/arming')
         self.mode_client = self.create_client(SetMode,     '/mavros/set_mode')
         self.land_client = self.create_client(CommandTOL,  '/mavros/cmd/land')
 
-    # ── callbacks ────────────────────────────────────────────────────────────
+    # callbacks ────────────────────────────────────────────────────────────
 
     def _pose_cb(self, msg: PoseStamped):
         self.current_pose = msg
         self.have_pose    = True
 
-    # ── helpers ──────────────────────────────────────────────────────────────
+    # helpers ──────────────────────────────────────────────────────────────
 
     def _spin(self, duration: float = 0.05):
         """Process callbacks for `duration` seconds."""
@@ -198,7 +197,7 @@ class WaypointNavNode(Node):
             self._publish_wp(wp)
             self._spin(1.0 / SETPOINT_HZ)
 
-    # ── main sequence ────────────────────────────────────────────────────────
+    # main sequence ────────────────────────────────────────────────────────
 
     def run(self):
         mission_start = time.time()
@@ -266,7 +265,7 @@ class WaypointNavNode(Node):
         self._fly_to(origin_cruise)
         self._dwell(origin_cruise)
 
-        # 8. Land via AUTO.LAND — same approach as takeoff_land.py
+        # 8. Land via AUTO.LAND — same as takeoff_land.py
         self.get_logger().info('Switching to AUTO.LAND …')
         if not self._set_mode('AUTO.LAND'):
             self.get_logger().error('Could not switch to AUTO.LAND — manual intervention needed')

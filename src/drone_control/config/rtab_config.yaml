@@ -1,0 +1,46 @@
+/**:
+  ros__parameters:
+    use_sim_time: true
+    frame_id: base_link
+    odom_frame_id: odom
+    
+    # Tell RTAB-Map we have both RGBD and LiDAR
+    subscribe_rgbd: false
+    subscribe_depth: true
+    subscribe_scan_cloud: true
+    
+    # Sync — depth + RGB + cloud arrive at slightly different rates
+    approx_sync: true
+    approx_sync_max_interval: 0.05
+    queue_size: 30
+    
+    # Use external odom (MAVROS), don't compute our own
+    Reg/Force3DoF: "false"
+    
+    # THE FUSION SETTING — visual + ICP
+    Reg/Strategy: "2"
+    
+    # ICP tuning for sparse outdoor pointcloud
+    Icp/PointToPlane: "true"
+    Icp/VoxelSize: "0.2"
+    Icp/MaxCorrespondenceDistance: "1.0"
+    Icp/Iterations: "30"
+    Icp/Epsilon: "0.001"
+    Icp/MaxTranslation: "2.0"
+    Icp/PMOutlierRatio: "0.7"
+    
+    # Build the occupancy grid from LiDAR (it's denser and longer-range than depth cam)
+    Grid/Sensor: "0"
+    Grid/RangeMax: "50.0"
+    Grid/CellSize: "0.2"
+    Grid/3D: "true"
+    Grid/RayTracing: "true"
+    
+    # Loop closure — visual features handle this
+    Vis/MinInliers: "15"
+    Mem/IncrementalMemory: "true"
+    
+    # Memory management for long surveys
+    Mem/STMSize: "30"
+    RGBD/LinearUpdate: "0.1"
+    RGBD/AngularUpdate: "0.1"

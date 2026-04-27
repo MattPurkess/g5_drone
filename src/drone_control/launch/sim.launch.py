@@ -9,17 +9,20 @@ def generate_launch_description():
     #~ Path defs
     pkg_share = get_package_share_directory('drone_control')
     worlds_path = os.path.join(pkg_share, 'worlds')
-    world_file = os.path.join(worlds_path, 'france.sdf')
+    france_world_file = os.path.join(worlds_path, 'france.sdf')
+    campus_world_file = os.path.join(worlds_path, 'ELEC330Campus.sdf')
     meshes_path = os.path.join(worlds_path, 'meshes')
+
     models_path = os.path.join(pkg_share, 'models')
-        
+    survey_model_dir = os.path.join(models_path, 'x500_depth_survey')
+
     mavros_params = os.path.join(pkg_share, 'config', 'mavros_params.yaml')
     rviz_config = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
     bridge_config = os.path.join(pkg_share, 'config', 'gz_bridge_depth.yaml')
+    rtabmap_config = os.path.join(pkg_share, 'config', 'rtab_config.yaml')
 
     px4_worlds_dir = os.path.expanduser('~/PX4-Autopilot/Tools/simulation/gz/worlds')
-    #~
-
+    px4_models_dir = os.path.expanduser('~/PX4-Autopilot/Tools/simulation/gz/models')
 
     return LaunchDescription([
 
@@ -30,10 +33,12 @@ def generate_launch_description():
         ExecuteProcess(
             cmd=[
                 'bash', '-c',
-                f'mkdir -p {px4_worlds_dir} && ' # world dest
-                f'ln -sfn {world_file} {px4_worlds_dir}/france.sdf && ' # links world to PX4 location
-                f'ln -sfn {meshes_path} {px4_worlds_dir}/meshes'
-                
+                f'mkdir -p {px4_worlds_dir} && '
+                f'mkdir -p {px4_models_dir} && '
+                f'ln -sfn {france_world_file} {px4_worlds_dir}/france.sdf && '
+                f'ln -sfn {campus_world_file} {px4_worlds_dir}/ELEC330Campus.sdf && '
+                f'ln -sfn {meshes_path} {px4_worlds_dir}/meshes && '
+                f'ln -sfn {survey_model_dir} {px4_models_dir}/x500_depth_survey'
             ],
             output='screen'
         ),
@@ -65,9 +70,15 @@ def generate_launch_description():
             cmd=[
                 'bash', '-c',
                 'cd ~/PX4-Autopilot && '
-                'PX4_GZ_WORLD=france '
-                'PX4_SIM_MODEL=gz_x500_mono_cam_down '
-                'make px4_sitl gz_x500_mono_cam_down'
+                # 'PX4_GZ_WORLD=france '
+                # 'PX4_SIM_MODEL=gz_x500_mono_cam_down '
+                # 'make px4_sitl gz_x500_mono_cam_down'
+                'make px4_sitl && '
+                'PX4_SYS_AUTOSTART=4002 '
+                'PX4_GZ_WORLD=ELEC330Campus '
+                'PX4_SIM_MODEL=gz_x500_depth_survey '
+                'PX4_GZ_MODEL_POSE="0,0,0.1,0,0,0" '
+                './build/px4_sitl_default/bin/px4 -i 0'
             ],
             output='screen'
         ),
@@ -75,7 +86,7 @@ def generate_launch_description():
         Node(
             package='mavros',
             executable='mavros_node',
-            parameters=[mavros_params],
+            parameters=[mavros_params, {'use_sim_time': True}],
             output='screen'
         ),
 
@@ -93,7 +104,82 @@ def generate_launch_description():
             arguments=['-d', rviz_config],
             output='screen'
         ),
-        
+
+        Node(
+            package='rtabmap_slam',
+            executable='rtabmap',
+            name='rtabmap',
+            output='screen',
+            remappings=[
+                ('/rgb/image', '/x500/camera/image_raw'),
+                ('/rgb/camera_info', '/x500/camera/camera_info'),
+                ('/depth/image', '/x500/depth/image_raw'),
+                ('/scan_cloud', '/x500/scan/points'),
+                ('/odom', '/mavros/local_position/odom'),
+                ('/imu', '/mavros/imu/data'),
+            ],
+            parameters=[rtabmap_config],
+        ),
+
+
+
+        # base_link -> camera_link (body-axes mount point on the drone)
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='base_to_camera_tf',
+            arguments=[
+                '--x', '0.12',
+                '--y', '0.03',
+                '--z', '0.242',
+                '--roll', '0',
+                '--pitch', '1',
+                '--yaw', '0',
+                '--frame-id', 'base_link',
+                '--child-frame-id', 'camera_link'
+            ],
+            parameters=[{'use_sim_time': True}],
+            output='screen'
+        ),
+
+        # camera_link -> camera_optical_frame (ROS optical convention)
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='camera_to_optical_tf',
+            arguments=[
+                '--x', '0',
+                '--y', '0',
+                '--z', '0',
+                '--roll', '-1.5708',
+                '--pitch', '0',
+                '--yaw', '-1.5708',
+                '--frame-id', 'camera_link',
+                '--child-frame-id', 'camera_optical_frame'
+            ],
+            parameters=[{'use_sim_time': True}],
+            output='screen'
+        ),
+
+        # base_link -> lidar_link
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='base_to_lidar_tf',
+            arguments=[
+                '--x', '0',
+                '--y', '0',
+                '--z', '0.15',
+                '--roll', '0',
+                '--pitch', '0',
+                '--yaw', '0',
+                '--frame-id', 'base_link',
+                '--child-frame-id', 'lidar_link'
+            ],
+            parameters=[{'use_sim_time': True}],
+            output='screen'
+        ),
+
         ExecuteProcess(
             cmd=[
                 'gnome-terminal', '--',
@@ -102,4 +188,5 @@ def generate_launch_description():
             ],
             output='screen'
         )
+
     ])
