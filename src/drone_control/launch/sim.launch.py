@@ -5,6 +5,8 @@ from ament_index_python.packages import get_package_share_directory
 import os
 
 def generate_launch_description():
+
+    #~ Path defs
     pkg_share = get_package_share_directory('drone_control')
     worlds_path = os.path.join(pkg_share, 'worlds')
     france_world_file = os.path.join(worlds_path, 'france.sdf')
@@ -23,6 +25,11 @@ def generate_launch_description():
     px4_models_dir = os.path.expanduser('~/PX4-Autopilot/Tools/simulation/gz/models')
 
     return LaunchDescription([
+
+        #~ Links to PX4
+        #Make this for the drone model xx bc px4 launches gazebo
+        # - need camera forward & camera down - do this on x5000 depth (matt needs depth)
+        
         ExecuteProcess(
             cmd=[
                 'bash', '-c',
@@ -36,15 +43,36 @@ def generate_launch_description():
             output='screen'
         ),
 
+        #~ Get apriltag sdf for gazebo world
         SetEnvironmentVariable(
             name='GZ_SIM_RESOURCE_PATH',
-            value=worlds_path + ':' + os.environ.get('GZ_SIM_RESOURCE_PATH', '')
+            value=':'.join(
+                path for path in [
+                    worlds_path,
+                    models_path,
+                    os.environ.get('GZ_SIM_RESOURCE_PATH', '')
+                ] if path
+            )
         ),
+
+        SetEnvironmentVariable(
+            name='SDF_PATH',
+            value=':'.join(
+                path for path in [
+                    models_path,
+                    os.environ.get('SDF_PATH', '')
+                ] if path
+            )
+        ),
+        #~
 
         ExecuteProcess(
             cmd=[
                 'bash', '-c',
                 'cd ~/PX4-Autopilot && '
+                # 'PX4_GZ_WORLD=france '
+                # 'PX4_SIM_MODEL=gz_x500_mono_cam_down '
+                # 'make px4_sitl gz_x500_mono_cam_down'
                 'make px4_sitl && '
                 'PX4_SYS_AUTOSTART=4002 '
                 'PX4_GZ_WORLD=ELEC330Campus '
