@@ -1,45 +1,63 @@
 #!/usr/bin/env python3
 """
-Utility functions for converting AprilTag detections from the
-camera optical frame to world ENU coordinates using tf2.
+Utility functions for getting AprilTag world position from TF
+and computing lateral error for landing guidance.
 """
 import rclpy
 from rclpy.node import Node
 import tf2_ros
-import tf2_geometry_msgs
-from geometry_msgs.msg import PoseStamped, PointStamped
-from apriltag_msgs.msg import AprilTagDetectionArray
+from geometry_msgs.msg import PoseStamped
 import numpy as np
 
-
-def detection_to_camera_pose(detection) -> PoseStamped:
-    """Convert a single AprilTagDetection into a PoseStamped in the camera_down_link frame."""
-    pose_stamped = PoseStamped()
-    pose_stamped.header = detection.pose.header
-    pose_stamped.pose   = detection.pose.pose.pose
-    return pose_stamped
+TAG_FRAME    = 'tag36h11:0'   # confirm with: ros2 run tf2_tools view_frames
+CAMERA_FRAME = 'camera_down_link'
+MAX_TAG_AGE_S = 0.5           # reject transforms older than this
 
 
-def transform_to_world(node: Node,
-                        tf_buffer: tf2_ros.Buffer,
-                        pose_cam: PoseStamped,
-                        world_frame: str = 'map') -> PoseStamped:
-    """Transform pose_cam (in camera frame) to world_frame using tf2. Returns None if unavailable."""
+def get_tag_world_pose(node: Node,
+                       tf_buffer: tf2_ros.Buffer,
+                       tag_frame: str = TAG_FRAME,
+                       world_frame: str = 'map') -> PoseStamped | None:
+    """
+    Look up the tag pose in world_frame directly from the TF tree.
+    apriltag_ros publishes camera_down_link -> tag36h11:0 to /tf,
+    so once base_link -> camera_down_link is also in the tree,
+    TF can chain all the way from map to the tag automatically.
+    Returns None if the transform is unavailable or too stale.
+    """
     try:
-        pose_world = tf_buffer.transform(
-            pose_cam, world_frame,
+        t = tf_buffer.lookup_transform(
+            world_frame,
+            tag_frame,
+            rclpy.time.Time(),  # latest available
             timeout=rclpy.duration.Duration(seconds=0.1)
         )
-        return pose_world
+
+        # Reject stale transforms (tag has left FOV)
+        age = (node.get_clock().now()
+               - rclpy.time.Time.from_msg(t.header.stamp)).nanoseconds * 1e-9
+        if age > MAX_TAG_AGE_S:
+            node.get_logger().warn(f'Tag transform is {age:.2f}s old, ignoring')
+            return None
+
+        pose = PoseStamped()
+        pose.header.stamp    = t.header.stamp
+        pose.header.frame_id = world_frame
+        pose.pose.position.x = t.transform.translation.x
+        pose.pose.position.y = t.transform.translation.y
+        pose.pose.position.z = t.transform.translation.z
+        pose.pose.orientation = t.transform.rotation
+        return pose
+
     except (tf2_ros.LookupException,
             tf2_ros.ConnectivityException,
             tf2_ros.ExtrapolationException) as e:
-        node.get_logger().warn(f'TF transform failed: {e}')
+        node.get_logger().warn(f'Tag TF lookup failed: {e}')
         return None
 
 
 def lateral_error(drone_pose: PoseStamped,
-                   tag_world:  PoseStamped) -> tuple:
+                  tag_world:  PoseStamped) -> tuple:
     """
     Compute (ex, ey) lateral error in metres (ENU world frame).
     Positive ex: tag is East  of drone.

@@ -30,6 +30,23 @@ def generate_launch_description():
             arguments=['0', '0', '-0.05',
                     '0', '0.7071', '0', '0.7071',
                     'base_link', 'camera_down_link'],
+            parameters=[{'use_sim_time': True}],
+        ),
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='camera_to_camera_down_tf',
+            arguments=[
+                '--x',     '0.0',
+                '--y',     '0.0',
+                '--z',     '0.0',
+                '--roll',  '0.0',
+                '--pitch', '0.0',
+                '--yaw',   '0.0',
+               '--frame-id',       'camera_down_link',
+                '--child-frame-id', 'camera_link',
+            ],
+            parameters=[{'use_sim_time': True}]
         ),
         
     ])
