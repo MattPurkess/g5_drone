@@ -86,7 +86,7 @@ def generate_launch_description():
             executable='parameter_bridge',
             name='camera_bridge',
             output='screen',
-            parameters=[{'config_file': bridge_config}],
+            parameters=[{'config_file': bridge_config, 'use_sim_time': True}],
         ),
 
         Node(
@@ -103,6 +103,7 @@ def generate_launch_description():
             name='map_to_odom_tf',
             # args: x y z  yaw pitch roll  parent_frame  child_frame
             arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
+            parameters=[{'use_sim_time': True}]
         ),
         
         ExecuteProcess(

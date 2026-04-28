@@ -95,13 +95,13 @@ def generate_launch_description():
             executable='parameter_bridge',
             name='camera_bridge',
             output='screen',
-            parameters=[{'config_file': bridge_config}],
+            parameters=[{'config_file': bridge_config, 'use_sim_time': True}],
         ),
 
         Node(
             package='rviz2',
             executable='rviz2',
-            arguments=['-d', rviz_config],
+            arguments=['-d', rviz_config, {'use_sim_time': True}],
             output='screen'
         ),
 
