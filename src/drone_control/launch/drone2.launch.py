@@ -25,7 +25,10 @@ def generate_launch_description():
             namespace='drone2',
             parameters=[
                 {
-                    'fcu_url': 'udp://:14541@localhost:14557',
+                    'fcu_url': 'udp://:14541@localhost:14581',
+                    'system_id': 255,
+                    'target_system_id': 2,
+                    'target_component_id': 1,
                     'use_sim_time': True,
                     'local_position.frame_id': 'drone2/odom',
                     'local_position.tf.send': True,

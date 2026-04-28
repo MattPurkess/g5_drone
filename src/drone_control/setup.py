@@ -48,6 +48,7 @@ setup(
             'mapping_survey = drone_control.mapping_survey:main',
             'circle_flight = drone_control.circle_flight:main',
             'waypoint_nav = drone_control.waypoint_nav:main',
+            'follow = drone_control.follow:main',
         ],
     },
 )
