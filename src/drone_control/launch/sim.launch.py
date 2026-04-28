@@ -111,9 +111,9 @@ def generate_launch_description():
             name='rtabmap',
             output='screen',
             remappings=[
-                ('/rgb/image', '/x500/camera/image_raw'),
-                ('/rgb/camera_info', '/x500/camera/camera_info'),
-                ('/depth/image', '/x500/depth/image_raw'),
+                ('/rgb/image', '/x500/rgbd/image_raw'),
+                ('/rgb/camera_info', '/x500/rgbd/camera_info'),
+                ('/depth/image', '/x500/rgbd/depth_image'),
                 ('/scan_cloud', '/x500/scan/points'),
                 ('/odom', '/mavros/local_position/odom'),
                 ('/imu', '/mavros/imu/data'),
@@ -123,11 +123,11 @@ def generate_launch_description():
 
 
 
-        # base_link -> camera_link (body-axes mount point on the drone)
+        # base_link -> rgbd_link (body-axes mount point on the drone)
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
-            name='base_to_camera_tf',
+            name='base_to_rgbd_tf',
             arguments=[
                 '--x', '0.12',
                 '--y', '0.03',
@@ -136,17 +136,17 @@ def generate_launch_description():
                 '--pitch', '1',
                 '--yaw', '0',
                 '--frame-id', 'base_link',
-                '--child-frame-id', 'camera_link'
+                '--child-frame-id', 'rgbd_link'
             ],
             parameters=[{'use_sim_time': True}],
             output='screen'
         ),
 
-        # camera_link -> camera_optical_frame (ROS optical convention)
+        # rgbd_link -> rgbd_optical_frame (ROS optical convention)
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
-            name='camera_to_optical_tf',
+            name='rgbd_to_optical_tf',
             arguments=[
                 '--x', '0',
                 '--y', '0',
@@ -154,8 +154,27 @@ def generate_launch_description():
                 '--roll', '-1.5708',
                 '--pitch', '0',
                 '--yaw', '-1.5708',
-                '--frame-id', 'camera_link',
-                '--child-frame-id', 'camera_optical_frame'
+                '--frame-id', 'rgbd_link',
+                '--child-frame-id', 'rgbd_optical_frame'
+            ],
+            parameters=[{'use_sim_time': True}],
+            output='screen'
+        ),
+
+        # base_link -> camera_link (mono down-camera from merged x500_mono_cam_down)
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='base_to_mono_cam_tf',
+            arguments=[
+                '--x', '0',
+                '--y', '0',
+                '--z', '0.10',
+                '--roll', '0',
+                '--pitch', '1.5707',
+                '--yaw', '0',
+                '--frame-id', 'base_link',
+                '--child-frame-id', 'camera_link'
             ],
             parameters=[{'use_sim_time': True}],
             output='screen'
