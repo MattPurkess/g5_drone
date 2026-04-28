@@ -14,7 +14,7 @@ from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool, SetMode
 from apriltag_msgs.msg import AprilTagDetectionArray
 from enum import Enum, auto
-from drone_control.drone_control.scripts.tag_transform_pixels import detection_to_camera_pose, transform_to_world, lateral_error, euclidean_2d
+from drone_control.scripts.tag_transform_pixels import detection_to_camera_pose, transform_to_world, lateral_error, euclidean_2d
 
 
 class LandState(Enum):

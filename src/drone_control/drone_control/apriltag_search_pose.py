@@ -12,7 +12,7 @@ from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool, SetMode
 from apriltag_msgs.msg import AprilTagDetectionArray
 import tf2_ros
-from drone_control.drone_control.scripts.tag_transform_pose import (
+from drone_control.scripts.tag_transform_pose import (
     detection_to_camera_pose, transform_to_world)
 
 class AprilTagSearchNode(Node):
@@ -93,7 +93,10 @@ class AprilTagSearchNode(Node):
                 if world_pose is not None:
                     self.tag_world_pose = world_pose
                     self.tag_found      = True
-                    self.get_logger().info('TAG FOUND! Transitioning to Landing Controller.')
+                    self.get_logger().info(
+                        f'TAG FOUND at world ({world_pose.pose.position.x:.2f}, '
+                        f'{world_pose.pose.position.y:.2f})'
+                        )
                     self.tag_found_pub.publish(world_pose)
 
     def pub_sp(self, x, y, z):
