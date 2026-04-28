@@ -49,6 +49,8 @@ setup(
             'circle_flight = drone_control.circle_flight:main',
             'waypoint_nav = drone_control.waypoint_nav:main',
             'follow = drone_control.follow:main',
+            'lidar_to_obstacle = drone_control.lidar_to_obstacle:main',
+            'avoidance_test = drone_control.avoidance_test:main',
         ],
     },
 )
