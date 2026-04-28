@@ -9,8 +9,10 @@ def generate_launch_description():
     #~ Path defs
     pkg_share = get_package_share_directory('drone_control')
     worlds_path = os.path.join(pkg_share, 'worlds')
-    world_file = os.path.join(worlds_path, 'france.sdf')
+    france_world_file = os.path.join(worlds_path, 'france.sdf')
+    campus_world_file = os.path.join(worlds_path, 'ELEC330Campus.sdf')
     meshes_path = os.path.join(worlds_path, 'meshes')
+    
     models_path = os.path.join(pkg_share, 'models')
         
     mavros_params = os.path.join(pkg_share, 'config', 'mavros_params.yaml')
@@ -18,7 +20,6 @@ def generate_launch_description():
     bridge_config = os.path.join(pkg_share, 'config', 'gz_bridge_depth.yaml')
 
     px4_worlds_dir = os.path.expanduser('~/PX4-Autopilot/Tools/simulation/gz/worlds')
-    #~
 
 
     return LaunchDescription([
@@ -31,7 +32,8 @@ def generate_launch_description():
             cmd=[
                 'bash', '-c',
                 f'mkdir -p {px4_worlds_dir} && ' # world dest
-                f'ln -sfn {world_file} {px4_worlds_dir}/france.sdf && ' # links world to PX4 location
+                f'ln -sfn {france_world_file} {px4_worlds_dir}/france.sdf && ' # links world to PX4 location
+                f'ln -sfn {campus_world_file} {px4_worlds_dir}/ELEC330Campus.sdf && '
                 f'ln -sfn {meshes_path} {px4_worlds_dir}/meshes'
                 
             ],
@@ -65,7 +67,7 @@ def generate_launch_description():
             cmd=[
                 'bash', '-c',
                 'cd ~/PX4-Autopilot && '
-                'PX4_GZ_WORLD=france '
+                'PX4_GZ_WORLD=ELEC330Campus '
                 'PX4_SIM_MODEL=gz_x500_mono_cam_down '
                 'make px4_sitl gz_x500_mono_cam_down'
             ],
@@ -84,7 +86,7 @@ def generate_launch_description():
             executable='parameter_bridge',
             name='camera_bridge',
             output='screen',
-            parameters=[{'config_file': bridge_config}],
+            parameters=[{'config_file': bridge_config, 'use_sim_time': True}],
         ),
 
         Node(
@@ -92,6 +94,16 @@ def generate_launch_description():
             executable='rviz2',
             arguments=['-d', rviz_config],
             output='screen'
+        ),
+        # publish map -> odom so RViz and other nodes see a single tree with 'map' as the root
+        # temp fix, need the SLAM node to work here
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='map_to_odom_tf',
+            # args: x y z  yaw pitch roll  parent_frame  child_frame
+            arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
+            parameters=[{'use_sim_time': True}]
         ),
         
         ExecuteProcess(
