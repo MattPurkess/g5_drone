@@ -151,18 +151,33 @@ class PrecisionLandingNode(Node):
 
         if self.fsm_state == LandState.APPROACH:
             if (self.last_u_err is not None and self.last_v_err is not None and tag_age < 1.0):
-                # FIXED MAPPING:
-                # v_err (up/down) maps to East/West (World X)
-                # u_err (right/left) maps to North/South (World Y)
-                vx = -self.Kp_img * self.last_v_err    # Tag Up (-v) -> Drone moves East (+vx)
-                vy = -self.Kp_img * self.last_u_err    # Tag Right (+u) -> Drone moves South (-vy)
+                # Tag is fresh: Use visual servoing
+                vx = -self.Kp_img * self.last_v_err    # Tag Up (-y) -> Drone moves East (+vx)
+                vy = -self.Kp_img * self.last_u_err    # Tag Right (+x) -> Drone moves South (-vy)
+                
+                # FIX 1: Clamp velocity to limit pitch/roll tilt during approach
+                import numpy as np
+                approach_max_v = 0.5 # Adjust this (m/s) so the drone doesn't tilt out of FOV
+                vx = float(np.clip(vx, -approach_max_v, approach_max_v))
+                vy = float(np.clip(vy, -approach_max_v, approach_max_v))
+
                 self.cmd_vel(vx, vy, 0.0)
 
                 centered = (abs(self.last_u_err) < self.img_center_tol and 
                             abs(self.last_v_err) < self.img_center_tol)
             else:
-                self.cmd_vel(self.Kp * ex, self.Kp * ey, 0.0)
-                centered = err_2d < self.app_tol
+                # Tag lost (likely due to tilt): Use world coordinates to get close
+                # Limit velocity here as well to prevent aggressive swinging
+                import numpy as np
+                approach_max_v = 0.5
+                vx = float(np.clip(self.Kp * ex, -approach_max_v, approach_max_v))
+                vy = float(np.clip(self.Kp * ey, -approach_max_v, approach_max_v))
+                
+                self.cmd_vel(vx, vy, 0.0)
+                
+                # FIX 2: Do NOT allow transition if the tag is not currently seen!
+                # Wait until the camera levels out, sees the tag, and visually centers it.
+                centered = False
 
             if centered:
                 self.get_logger().info('FSM: APPROACH -> DESCEND_COARSE')
@@ -200,33 +215,44 @@ class PrecisionLandingNode(Node):
                 self.fsm_state = LandState.FINAL_DESCENT
 
         elif self.fsm_state == LandState.FINAL_DESCENT:
-            # Send land service call to trigger AUTOLAND mode.
-            # Transition to LANDED when altitude < 0.15 m.
-            req = CommandTOL.Request()
-            req.yaw = 0.0
-            req.latitude = 0.0
-            req.longitude = 0.0
-            req.altitude = 0.0
-            self.land_client.call_async(req)
-            self.get_logger().info('Land command sent, waiting for touchdown...')
-            self.fsm_state = LandState.LANDED  # Will verify touchdown in next state
-            self.tag_last_seen = time.time()  # Reset timer for touchdown check
+            # 1. Send land service call to trigger AUTOLAND mode EXACTLY ONCE.
+            if not getattr(self, 'land_cmd_sent', False):
+                req = SetMode.Request()
+                req.base_mode = 0
+                req.custom_mode = 'AUTO.LAND'
+                self.set_mode_client.call_async(req)
+                self.get_logger().info('AUTO.LAND command sent, waiting for touchdown...')
+                self.land_cmd_sent = True  # Prevent spamming the service
 
-        elif self.fsm_state == LandState.LANDED:
-            # Monitor altitude to confirm touchdown (alt < 0.15 m)
+            # 2. Transition to LANDED when altitude < 0.15 m.
             if alt < 0.15:
-                flight_time = time.time() - self.start_time
-                self.get_logger().info(
-                    f'LANDED. Final lateral error: {err_2d:.3f} m  '
-                    f'Flight time: {flight_time:.1f} s'
-                )
-                req = CommandBool.Request()
-                req.value = False
-                self.arm_client.call_async(req)
-                # Mark as fully landed by breaking out of FSM loop
-                self.fsm_state = None  # Signal to exit main loop
+                self.get_logger().info('Touchdown altitude reached.')
+                self.fsm_state = LandState.LANDED
             else:
                 self.get_logger().debug(f'Descending to touchdown: alt={alt:.2f} m')
+
+        elif self.fsm_state == LandState.LANDED:
+            # 1. Disarm the motors
+            req = CommandBool.Request()
+            req.value = False
+            self.arm_client.call_async(req)
+            self.get_logger().info('Disarm command sent.')
+
+            # 2. Publish the landing report
+            flight_time = time.time() - self.start_time
+            
+            # Safely calculate final pixel error in case the tag was lost at the very last second
+            final_px_err = 0.0
+            if self.last_x_err is not None and self.last_y_err is not None:
+                final_px_err = euclidean_2d(self.last_x_err, self.last_y_err)
+
+            self.get_logger().info(
+                f'LANDED. Final pixel error: {final_px_err:.3f} px  '
+                f'Flight time: {flight_time:.1f} s'
+            )
+            
+            # 3. Mark as fully landed by breaking out of FSM loop
+            self.fsm_state = None  # Signal to exit main loop
 
     def run(self):
         rate_hz = 20

@@ -19,7 +19,7 @@ class AprilTagSearchNode(Node):
     def __init__(self):
         super().__init__('apriltag_search_node')
 
-        self.declare_parameter('search_altitude',   7.0)
+        self.declare_parameter('search_altitude',   12.0)
         self.declare_parameter('step_size',          8.0)
         self.declare_parameter('max_radius',        60.0)
         self.declare_parameter('target_tag_id',        0)
@@ -93,10 +93,7 @@ class AprilTagSearchNode(Node):
                 if world_pose is not None:
                     self.tag_world_pose = world_pose
                     self.tag_found      = True
-                    self.get_logger().info(
-                        f'TAG FOUND at world ({world_pose.pose.position.x:.2f}, '
-                        f'{world_pose.pose.position.y:.2f})'
-                        )
+                    self.get_logger().info('TAG FOUND: Transitioning to Landing Controller.')
                     self.tag_found_pub.publish(world_pose)
 
     def pub_sp(self, x, y, z):

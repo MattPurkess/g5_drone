@@ -99,9 +99,7 @@ class AprilTagSearchNode(Node):
                 if world_pose is not None:
                     self.tag_world_pose = world_pose
                     self.tag_found      = True
-                    self.get_logger().info(
-                        f'TAG FOUND'
-                    )
+                    self.get_logger().info('TAG FOUND: Transitioning to Landing Controller.')
                     self.tag_found_pub.publish(world_pose)
 
     def pub_sp(self, x, y, z):
