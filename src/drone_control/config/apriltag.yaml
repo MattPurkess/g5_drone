@@ -2,7 +2,7 @@ apriltag_detector:
   ros__parameters:
     publish_tf:   true
     family:       '36h11'
-    size:         0.6          # physical tag side len in metres (match SDF model)
+    size:         0.5          # physical tag side len in metres (match SDF model)
     max_hamming:  1            # allow one corrected bit; Gazebo camera images can be slightly blurred/aliased
     detector:
       threads:    2
@@ -13,4 +13,4 @@ apriltag_detector:
       debug:      false
     tag:
       ids:   [0]               # only detect Tag ID 0 - add more ids if added
-      sizes: [0.6]
+      sizes: [0.5]

@@ -78,29 +78,6 @@ class AprilTagSearchNode(Node):
         tf_msg.transform.rotation = msg.pose.orientation
         self.tf_broadcaster.sendTransform(tf_msg)
 
-        camera_tf = TransformStamped()
-        camera_tf.header.stamp = msg.header.stamp
-        camera_tf.header.frame_id = 'base_link'
-        camera_tf.child_frame_id = 'camera_down_link'
-        camera_tf.transform.translation.x = 0.0
-        camera_tf.transform.translation.y = 0.0
-        camera_tf.transform.translation.z = -0.05
-        camera_tf.transform.rotation.x = 0.0
-        camera_tf.transform.rotation.y = 0.7071
-        camera_tf.transform.rotation.z = 0.0
-        camera_tf.transform.rotation.w = 0.7071
-        self.tf_broadcaster.sendTransform(camera_tf)
-
-        camera_alias = TransformStamped()
-        camera_alias.header.stamp = msg.header.stamp
-        camera_alias.header.frame_id = 'camera_down_link'
-        camera_alias.child_frame_id = 'camera_link'
-        camera_alias.transform.translation.x = 0.0
-        camera_alias.transform.translation.y = 0.0
-        camera_alias.transform.translation.z = 0.0
-        camera_alias.transform.rotation.w = 1.0
-        self.tf_broadcaster.sendTransform(camera_alias)
-
     def detection_cb(self, msg: AprilTagDetectionArray):
         if self.tag_found:
             return

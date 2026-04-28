@@ -79,7 +79,7 @@ class PrecisionLandingNode(Node):
         self.det_sub      = self.create_subscription(
             AprilTagDetectionArray, '/detections', self.detection_cb, qos_profile_sensor_data)
         self.cam_info_sub = self.create_subscription(
-            CameraInfo, '/drone/down_camera/camera_info', self.camera_info_cb, qos_profile_sensor_data)
+            CameraInfo, '/x500/down_camera/camera_info', self.camera_info_cb, qos_profile_sensor_data)
 
         self.sp_pub  = self.create_publisher(
             PoseStamped,  '/mavros/setpoint_position/local', 10)

@@ -20,7 +20,7 @@ def detection_to_camera_pose(detection) -> PoseStamped:
     zero-height pose for downstream TF handling.
     """
     pose_stamped = PoseStamped()
-    pose_stamped.header.frame_id = 'camera_down_link'
+    pose_stamped.header.frame_id = 'camera_link'
     pose_stamped.pose.position.x = float(detection.centre.x)
     pose_stamped.pose.position.y = float(detection.centre.y)
     pose_stamped.pose.position.z = 0.0

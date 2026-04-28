@@ -50,6 +50,8 @@ setup(
             'waypoint_nav = drone_control.waypoint_nav:main',
             'apriltag_search = drone_control.apriltag_search:main',
             'precision_landing = drone_control.precision_landing:main',
+            'apriltag_search_test = drone_control.apriltag_search_test:main',
+            'precision_landing_test = drone_control.precision_landing_test:main',
         ],
     },
 )

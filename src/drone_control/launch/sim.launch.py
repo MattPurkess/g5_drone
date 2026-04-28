@@ -20,6 +20,7 @@ def generate_launch_description():
     rviz_config = os.path.join(pkg_share, 'config', 'rviz_config.rviz')
     bridge_config = os.path.join(pkg_share, 'config', 'gz_bridge_depth.yaml')
     rtabmap_config = os.path.join(pkg_share, 'config', 'rtab_config.yaml')
+    apriltag_config = os.path.join(pkg_share, 'config', 'apriltag.yaml')
 
     px4_worlds_dir = os.path.expanduser('~/PX4-Autopilot/Tools/simulation/gz/worlds')
     px4_models_dir = os.path.expanduser('~/PX4-Autopilot/Tools/simulation/gz/models')
@@ -121,6 +122,18 @@ def generate_launch_description():
             parameters=[rtabmap_config],
         ),
 
+        Node(
+            package='apriltag_ros',
+            executable='apriltag_node',
+            name='apriltag_detector',
+            remappings=[
+                ('image_rect', '/x500/down_camera/image_raw'),
+                ('camera_info', '/x500/down_camera/camera_info'),
+            ],
+            parameters=[apriltag_config, {'use_sim_time': True}],
+            output='screen',
+        ),
+
 
 
         # base_link -> rgbd_link (body-axes mount point on the drone)
@@ -170,9 +183,9 @@ def generate_launch_description():
                 '--x', '0',
                 '--y', '0',
                 '--z', '0.10',
-                '--roll', '0',
-                '--pitch', '1.5707',
-                '--yaw', '0',
+                '--roll', '3.14159',
+                '--pitch', '0',
+                '--yaw', '-1.5708',
                 '--frame-id', 'base_link',
                 '--child-frame-id', 'camera_link'
             ],
