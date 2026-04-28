@@ -143,5 +143,59 @@
       <elevation>0</elevation>
     </spherical_coordinates>
 
+    <model name="pine_tree_1">
+      <static>true</static>
+      <pose>5 5 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <mesh>
+              <uri>meshes/pine_tree.dae</uri>
+              <scale>1.5 1.5 1.5</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="branch">
+          <geometry>
+            <mesh>
+              <uri>meshes/pine_tree.dae</uri>
+              <scale>1.5 1.5 1.5</scale>
+              <submesh>
+                <name>Branch</name>
+              </submesh>
+            </mesh>
+          </geometry>
+          <material>tree sdf for gazebo fuel model
+            <double_sided>true</double_sided>
+            <diffuse>1.0 1.0 1.0</diffuse>
+            <pbr>
+              <metal>
+                <albedo_map>meshes/branch_2_diffuse.png</albedo_map>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+        <visual name="bark">
+          <geometry>
+            <mesh>
+              <uri>meshes/pine_tree.dae</uri>
+              <scale>1.5 1.5 1.5</scale>
+              <submesh>
+                <name>Bark</name>
+              </submesh>
+            </mesh>
+          </geometry>
+          <material>
+            <diffuse>1.0 1.0 1.0</diffuse>
+            <pbr>
+              <metal>
+                <albedo_map>meshes/bark_diffuse.png</albedo_map>
+              </metal>
+            </pbr>
+          </material>
+        </visual>
+      </link>
+    </model>
+
   </world>
 </sdf>

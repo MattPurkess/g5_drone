@@ -52,6 +52,9 @@ setup(
             'precision_landing_pixels = drone_control.precision_landing_pixels:main',
             'apriltag_search_pose = drone_control.apriltag_search_pose:main',
             'precision_landing_pose = drone_control.precision_landing_pose:main',
+            'follow = drone_control.follow:main',
+            'lidar_to_obstacle = drone_control.lidar_to_obstacle:main',
+            'avoidance_test = drone_control.avoidance_test:main',
         ],
     },
 )
