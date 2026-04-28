@@ -49,6 +49,7 @@ setup(
             'circle_flight = drone_control.circle_flight:main',
             'waypoint_nav = drone_control.waypoint_nav:main',
             'apriltag_search = drone_control.apriltag_search:main',
+            'precision_landing = drone_control.precision_landing:main',
         ],
     },
 )

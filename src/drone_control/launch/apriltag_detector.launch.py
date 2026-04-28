@@ -17,7 +17,7 @@ def generate_launch_description():
                 ('image_rect', '/drone/down_camera/image_raw'),
                 ('camera_info', '/drone/down_camera/camera_info'),
             ],
-            parameters=[config],
+            parameters=[config, {'use_sim_time': True}],
             output='screen',
         ),
         # cam to body transform
