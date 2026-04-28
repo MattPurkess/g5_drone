@@ -11,7 +11,7 @@ from rclpy.qos import qos_profile_sensor_data
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from sensor_msgs.msg import CameraInfo
 from mavros_msgs.msg import State
-from mavros_msgs.srv import CommandBool, CommandTOL
+from mavros_msgs.srv import CommandBool, SetMode
 from apriltag_msgs.msg import AprilTagDetectionArray
 from enum import Enum, auto
 from drone_control.scripts.tag_transform import detection_to_camera_pose, transform_to_world, lateral_error, euclidean_2d
@@ -41,7 +41,6 @@ class PrecisionLandingNode(Node):
         self.declare_parameter('img_center_tol_px', 20.0)
         self.declare_parameter('Kp_img', 0.003)
         self.declare_parameter('Kp_img_coarse', 0.006)
-        self.declare_parameter('coarse_xy_deadband', 0.25)
         self.declare_parameter('detection_stale_sec', 2.0)
 
         self.Kp         = self.get_parameter('Kp').value
@@ -56,7 +55,6 @@ class PrecisionLandingNode(Node):
         self.img_center_tol = self.get_parameter('img_center_tol_px').value
         self.Kp_img = self.get_parameter('Kp_img').value
         self.Kp_img_coarse = self.get_parameter('Kp_img_coarse').value
-        self.coarse_xy_deadband = self.get_parameter('coarse_xy_deadband').value
         self.detection_stale_sec = self.get_parameter('detection_stale_sec').value
 
         self.fsm_state     = LandState.APPROACH
@@ -89,7 +87,7 @@ class PrecisionLandingNode(Node):
             TwistStamped, '/mavros/setpoint_velocity/cmd_vel', 10)
 
         self.arm_client  = self.create_client(CommandBool, '/mavros/cmd/arming')
-        self.land_client = self.create_client(CommandTOL,  '/mavros/cmd/land')
+        self.set_mode_client = self.create_client(SetMode, '/mavros/set_mode')
 
     def detection_cb(self, msg: AprilTagDetectionArray):
         for det in msg.detections:
@@ -101,12 +99,12 @@ class PrecisionLandingNode(Node):
 
             if match:
                 if self.cam_cx is not None and self.cam_cy is not None:
-                    self.last_u_err = float(det.centre.x) - self.cam_cx
-                    self.last_v_err = float(det.centre.y) - self.cam_cy
+                    self.last_x_err = float(det.centre.x) - self.cam_cx
+                    self.last_y_err = float(det.centre.y) - self.cam_cy
                     self.get_logger().debug(
                         f'Detection: centre=({det.centre.x:.1f}, {det.centre.y:.1f}) '
                         f'cam_centre=({self.cam_cx:.1f}, {self.cam_cy:.1f}) '
-                        f'err=(u={self.last_u_err:.1f}, v={self.last_v_err:.1f})'
+                        f'err=(x={self.last_x_err:.1f}, y={self.last_y_err:.1f})'
                     )
                 self.tag_last_seen = time.time()
 
@@ -148,16 +146,16 @@ class PrecisionLandingNode(Node):
         err_2d = euclidean_2d(ex, ey)
 
         if self.fsm_state == LandState.APPROACH:
-            if (self.last_u_err is not None and self.last_v_err is not None and tag_age < 1.0):
+            if (self.last_x_err is not None and self.last_y_err is not None and tag_age < 1.0):
                 # FIXED MAPPING:
-                # v_err (up/down) maps to East/West (World X)
-                # u_err (right/left) maps to North/South (World Y)
-                vx = -self.Kp_img * self.last_v_err    # Tag Up (-v) -> Drone moves East (+vx)
-                vy = -self.Kp_img * self.last_u_err    # Tag Right (+u) -> Drone moves South (-vy)
+                # y_err (up/down) maps to East/West (World X)
+                # x_err (right/left) maps to North/South (World Y)
+                vx = -self.Kp_img * self.last_y_err    # Tag Up (-y) -> Drone moves East (+vx)
+                vy = -self.Kp_img * self.last_x_err    # Tag Right (+x) -> Drone moves South (-vy)
                 self.cmd_vel(vx, vy, 0.0)
 
-                centered = (abs(self.last_u_err) < self.img_center_tol and 
-                            abs(self.last_v_err) < self.img_center_tol)
+                centered = (abs(self.last_x_err) < self.img_center_tol and 
+                            abs(self.last_y_err) < self.img_center_tol)
             else:
                 self.cmd_vel(self.Kp * ex, self.Kp * ey, 0.0)
                 centered = err_2d < self.app_tol
@@ -167,10 +165,10 @@ class PrecisionLandingNode(Node):
                 self.fsm_state = LandState.DESCEND_COARSE
 
         elif self.fsm_state == LandState.DESCEND_COARSE:
-            if (self.last_u_err is not None and self.last_v_err is not None and tag_age < self.detection_stale_sec):
+            if (self.last_x_err is not None and self.last_y_err is not None and tag_age < self.detection_stale_sec):
                 # APPLY FIXED MAPPING
-                vx = -self.Kp_img_coarse * self.last_v_err
-                vy = -self.Kp_img_coarse * self.last_u_err
+                vx = -self.Kp_img_coarse * self.last_y_err
+                vy = -self.Kp_img_coarse * self.last_x_err
             else:
                 vx, vy = self.Kp * ex, self.Kp * ey
                 
@@ -184,10 +182,10 @@ class PrecisionLandingNode(Node):
         elif self.fsm_state == LandState.DESCEND_FINE:
             if tag_age > 2.0:
                 self.cmd_vel(0.0, 0.0, 0.0)
-            elif (self.last_u_err is not None and self.last_v_err is not None and tag_age < self.detection_stale_sec):
+            elif (self.last_x_err is not None and self.last_y_err is not None and tag_age < self.detection_stale_sec):
                 # APPLY FIXED MAPPING
-                vx = -self.Kp_img * self.last_v_err
-                vy = -self.Kp_img * self.last_u_err
+                vx = -self.Kp_img * self.last_y_err
+                vy = -self.Kp_img * self.last_x_err
                 vz = -self.Kp_z * self.desc_vel
                 self.cmd_vel(vx, vy, vz)
             else:
@@ -200,12 +198,10 @@ class PrecisionLandingNode(Node):
         elif self.fsm_state == LandState.FINAL_DESCENT:
             # Send land service call to trigger AUTOLAND mode.
             # Transition to LANDED when altitude < 0.15 m.
-            req = CommandTOL.Request()
-            req.yaw = 0.0
-            req.latitude = 0.0
-            req.longitude = 0.0
-            req.altitude = 0.0
-            self.land_client.call_async(req)
+            req = SetMode.Request()
+            req.base_mode = 0
+            req.custom_mode = 'AUTO.LAND'
+            self.set_mode_client.call_async(req)
             self.get_logger().info('Land command sent, waiting for touchdown...')
             self.fsm_state = LandState.LANDED  # Will verify touchdown in next state
             self.tag_last_seen = time.time()  # Reset timer for touchdown check
@@ -213,16 +209,19 @@ class PrecisionLandingNode(Node):
         elif self.fsm_state == LandState.LANDED:
             # Monitor altitude to confirm touchdown (alt < 0.15 m)
             if alt < 0.15:
-                flight_time = time.time() - self.start_time
-                self.get_logger().info(
-                    f'LANDED. Final lateral error: {err_2d:.3f} m  '
-                    f'Flight time: {flight_time:.1f} s'
-                )
-                req = CommandBool.Request()
-                req.value = False
-                self.arm_client.call_async(req)
-                # Mark as fully landed by breaking out of FSM loop
-                self.fsm_state = None  # Signal to exit main loop
+                if self.current_state.armed:
+                    req = CommandBool.Request()
+                    req.value = False
+                    self.arm_client.call_async(req)
+                    self.get_logger().info('Touchdown detected, disarm command sent...')
+                else:
+                    flight_time = time.time() - self.start_time
+                    self.get_logger().info(
+                        f'LANDED. Final pixel error: {euclidean_2d(self.last_x_err, self.last_y_err):.3f} px  '
+                        f'Flight time: {flight_time:.1f} s'
+                    )
+                    # Mark as fully landed by breaking out of FSM loop
+                    self.fsm_state = None  # Signal to exit main loop
             else:
                 self.get_logger().debug(f'Descending to touchdown: alt={alt:.2f} m')
 
