@@ -3,10 +3,10 @@
   <model name='x500_depth_survey'>
 
     <include merge='true'>
-      <uri>x500</uri>
+      <uri>x500_mono_cam_down</uri>
     </include>
 
-    <link name="camera_link">
+    <link name="rgbd_link">
       <pose relative_to="base_link">0.12 0.03 0.242 0 1 0</pose>
       <inertial>
         <mass>0.05</mass>
@@ -16,7 +16,7 @@
         </inertia>
       </inertial>
 
-      <visual name="camera_visual">
+      <visual name="rgbd_visual">
       </visual>
 
       <sensor name="rgbd_camera" type="rgbd_camera">
@@ -30,19 +30,19 @@
             <near>0.3</near>
             <far>20</far>
           </clip>
-          <optical_frame_id>camera_optical_frame</optical_frame_id>
+          <optical_frame_id>rgbd_optical_frame</optical_frame_id>
         </camera>
         <always_on>1</always_on>
         <update_rate>20</update_rate>
         <visualize>true</visualize>
-        <topic>camera</topic>
-        <gz_frame_id>camera_link</gz_frame_id>
+        <topic>rgbd</topic>
+        <gz_frame_id>rgbd_link</gz_frame_id>
       </sensor>
     </link>
 
-    <joint name="CameraJoint" type="fixed">
+    <joint name="RgbdJoint" type="fixed">
       <parent>base_link</parent>
-      <child>camera_link</child>
+      <child>rgbd_link</child>
     </joint>
     <link name="lidar_link">
       <pose relative_to="base_link">0 0 0.15 0 0 0</pose>
@@ -96,5 +96,6 @@
       <parent>base_link</parent>
       <child>lidar_link</child>
     </joint>
+
   </model>
 </sdf>

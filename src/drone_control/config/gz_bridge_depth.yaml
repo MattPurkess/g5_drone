@@ -1,41 +1,46 @@
-- gz_topic_name: /camera/image
-  ros_topic_name: /x500/camera/image_raw
+# RGBD camera (forward-tilted, on rgbd_link)
+- gz_topic_name: /rgbd/image
+  ros_topic_name: /x500/rgbd/image_raw
   gz_type_name: gz.msgs.Image
   ros_type_name: sensor_msgs/msg/Image
   direction: GZ_TO_ROS
 
-- gz_topic_name: /camera/camera_info
-  ros_topic_name: /x500/camera/camera_info
+- gz_topic_name: /rgbd/camera_info
+  ros_topic_name: /x500/rgbd/camera_info
   gz_type_name: gz.msgs.CameraInfo
   ros_type_name: sensor_msgs/msg/CameraInfo
   direction: GZ_TO_ROS
 
-- gz_topic_name: /world/france/model/x500_mono_cam_down_0/link/camera_link/sensor/camera/image
-  ros_topic_name: /drone/down_camera/image_raw
+- gz_topic_name: /rgbd/depth_image
+  ros_topic_name: /x500/rgbd/depth_image
   gz_type_name: gz.msgs.Image
   ros_type_name: sensor_msgs/msg/Image
   direction: GZ_TO_ROS
 
-- gz_topic_name: /world/france/model/x500_mono_cam_down_0/link/camera_link/sensor/camera/camera_info
-  ros_topic_name: /drone/down_camera/camera_info
+# Mono down-camera (from merged x500_mono_cam_down, on camera_link)
+# Stock mono_cam declares no <topic>, so Gazebo publishes on the long auto-path.
+- gz_topic_name: /world/ELEC330Campus/model/x500_depth_survey_0/link/camera_link/sensor/camera/image
+  ros_topic_name: /x500/down_camera/image_raw
+  gz_type_name: gz.msgs.Image
+  ros_type_name: sensor_msgs/msg/Image
+  direction: GZ_TO_ROS
+
+- gz_topic_name: /world/ELEC330Campus/model/x500_depth_survey_0/link/camera_link/sensor/camera/camera_info
+  ros_topic_name: /x500/down_camera/camera_info
   gz_type_name: gz.msgs.CameraInfo
   ros_type_name: sensor_msgs/msg/CameraInfo
   direction: GZ_TO_ROS
-  
-- gz_topic_name: /camera/depth_image
-  ros_topic_name: /x500/depth/image_raw
-  gz_type_name: gz.msgs.Image
-  ros_type_name: sensor_msgs/msg/Image
-  direction: GZ_TO_ROS
 
-- gz_topic_name: /clock
-  ros_topic_name: /clock
-  gz_type_name: gz.msgs.Clock
-  ros_type_name: rosgraph_msgs/msg/Clock
-  direction: GZ_TO_ROS
-  
+# Lidar
 - gz_topic_name: /scan/points
   ros_topic_name: /x500/scan/points
   gz_type_name: gz.msgs.PointCloudPacked
   ros_type_name: sensor_msgs/msg/PointCloud2
+  direction: GZ_TO_ROS
+
+# Clock
+- gz_topic_name: /clock
+  ros_topic_name: /clock
+  gz_type_name: gz.msgs.Clock
+  ros_type_name: rosgraph_msgs/msg/Clock
   direction: GZ_TO_ROS

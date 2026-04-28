@@ -31,20 +31,17 @@ class Waypoint:
     name: str = ''
 
 
-# Mission parameters
-TARGET_ALTITUDE = 8.0
-CENTER_X = 0.0
-CENTER_Y = 0.0
-RADIUS = 10.0
-LINEAR_SPEED = 2.0
-CIRCLE_LAPS = 1.0
+@dataclass
+class MissionConfig:
+    center_x: float
+    center_y: float
+    altitude: float
+    radius: float
+    linear_speed: float = 2.0
+    circle_laps: float = 1.0
 
-MISSION = [
-    Waypoint(0.0, 0.0, TARGET_ALTITUDE, name='Centre'),
-]
 
 # Tuning
-CRUISE_ALT = TARGET_ALTITUDE
 ACCEPT_RADIUS = 0.1
 SETPOINT_HZ = 20
 DT = 1.0 / SETPOINT_HZ
@@ -52,10 +49,25 @@ LAND_TIMEOUT = 60
 FLY_TIMEOUT = 60
 
 
+def ask_float(prompt, default=None):
+    while True:
+        text = input(prompt).strip()
+
+        if text == '' and default is not None:
+            return float(default)
+
+        try:
+            return float(text)
+        except ValueError:
+            print('Please enter a valid number.')
+
+
 class WaypointNavNode(Node):
 
-    def __init__(self):
+    def __init__(self, config: MissionConfig):
         super().__init__('waypoint_nav_node')
+
+        self.config = config
 
         self.mavros_state = State()
         self.current_pose = PoseStamped()
@@ -100,7 +112,6 @@ class WaypointNavNode(Node):
         res = self._call_service(self.arm_client, req)
         return res.success
 
-    # âœ… FIXED: all values explicitly cast to float
     def _make_sp(self, x, y, z, yaw=0.0):
         ps = PoseStamped()
 
@@ -148,23 +159,81 @@ class WaypointNavNode(Node):
             self._spin()
 
     def _fly_circle(self):
-        omega = LINEAR_SPEED / RADIUS
-        d_theta = omega * DT
-        theta = 0.0
-        final = 2.0 * math.pi * CIRCLE_LAPS
+        # Position-driven lookahead: the setpoint always sits a fixed angle ahead
+        # of where the drone actually is, so it can never out-run the drone and
+        # induce catch-up loops. Total progress is tracked by integrating the
+        # signed change in drone-angle (handling the ±π wrap), so completion is
+        # tied to physical motion rather than wall-clock iterations.
+        cfg = self.config
+        final = 2.0 * math.pi * cfg.circle_laps
 
-        while theta <= final:
-            x = CENTER_X + RADIUS * math.cos(theta)
-            y = CENTER_Y + RADIUS * math.sin(theta)
-            z = TARGET_ALTITUDE
-            yaw = theta + math.pi
+        # ~0.5 s of motion ahead, clamped to a sensible range.
+        lookahead_rad = max(0.05, min(0.5, (cfg.linear_speed / cfg.radius) * 0.5))
+
+        ideal_duration = cfg.radius * final / cfg.linear_speed
+        timeout = max(60.0, ideal_duration * 3.0)
+
+        self.get_logger().info(
+            f'Circling: r={cfg.radius:.1f} m, v={cfg.linear_speed:.1f} m/s, '
+            f'laps={cfg.circle_laps:.1f}, '
+            f'lookahead={math.degrees(lookahead_rad):.0f} deg'
+        )
+
+        last_theta = 0.0
+        progress = 0.0
+        first_iter = True
+        start = time.time()
+        last_log = start
+
+        while rclpy.ok():
+            dx = self.current_pose.pose.position.x - cfg.center_x
+            dy = self.current_pose.pose.position.y - cfg.center_y
+            drone_theta = math.atan2(dy, dx)
+
+            if first_iter:
+                last_theta = drone_theta
+                first_iter = False
+
+            delta = drone_theta - last_theta
+            if delta > math.pi:
+                delta -= 2.0 * math.pi
+            elif delta < -math.pi:
+                delta += 2.0 * math.pi
+
+            progress += delta
+            last_theta = drone_theta
+
+            if progress >= final:
+                self.get_logger().info('Circle complete.')
+                break
+
+            if time.time() - start > timeout:
+                self.get_logger().warn(
+                    f'Circle timeout at {math.degrees(progress):.0f} / '
+                    f'{math.degrees(final):.0f} deg'
+                )
+                break
+
+            target_theta = drone_theta + lookahead_rad
+            x = cfg.center_x + cfg.radius * math.cos(target_theta)
+            y = cfg.center_y + cfg.radius * math.sin(target_theta)
+            z = cfg.altitude
+            yaw = target_theta + math.pi  # face centre
 
             self._publish(x, y, z, yaw)
             self._spin()
 
-            theta += d_theta
+            now = time.time()
+            if now - last_log >= 5.0:
+                pct = (progress / final) * 100.0
+                self.get_logger().info(
+                    f'Circle: {pct:.0f}% complete '
+                    f'({math.degrees(progress):.0f} / {math.degrees(final):.0f} deg)'
+                )
+                last_log = now
 
     def run(self):
+        cfg = self.config
 
         while not self.mavros_state.connected:
             self._spin(0.1)
@@ -172,34 +241,41 @@ class WaypointNavNode(Node):
         while not self.have_pose:
             self._spin(0.1)
 
-        # âœ… FIXED: floats here too
+        # Pre-stream at the current x/y at altitude so OFFBOARD-on-arm climbs
+        # vertically rather than darting diagonally toward (cx, cy).
+        climb_wp = Waypoint(
+            float(self.current_pose.pose.position.x),
+            float(self.current_pose.pose.position.y),
+            float(cfg.altitude),
+            name='Climb'
+        )
+
         t0 = time.time()
         while time.time() - t0 < 2:
-            self._publish(0.0, 0.0, TARGET_ALTITUDE)
+            self._publish(climb_wp.x, climb_wp.y, climb_wp.z)
             self._spin()
 
         self._set_mode('OFFBOARD')
         self._arm(True)
 
-        # climb (safe)
-        climb_wp = Waypoint(
-            float(self.current_pose.pose.position.x),
-            float(self.current_pose.pose.position.y),
-            float(CRUISE_ALT),
-            name='Climb'
-        )
-
         self._fly_to(climb_wp)
 
         # centre
-        self._fly_to(MISSION[0])
-        self._dwell(MISSION[0])
+        centre_wp = Waypoint(
+            cfg.center_x,
+            cfg.center_y,
+            cfg.altitude,
+            name='Centre'
+        )
+
+        self._fly_to(centre_wp)
+        self._dwell(centre_wp)
 
         # move to circle start
         start_wp = Waypoint(
-            CENTER_X + RADIUS,
-            CENTER_Y,
-            TARGET_ALTITUDE,
+            cfg.center_x + cfg.radius,
+            cfg.center_y,
+            cfg.altitude,
             name='Circle start'
         )
 
@@ -213,15 +289,62 @@ class WaypointNavNode(Node):
 
 
 def main():
+    print('\nCircular Flight Setup')
+    print('Press Enter to use the default value shown in brackets.\n')
+
+    center_x = ask_float('Centre X coordinate [0.0]: ', 0.0)
+    center_y = ask_float('Centre Y coordinate [0.0]: ', 0.0)
+    altitude = ask_float('Altitude in metres [8.0]: ', 8.0)
+    radius = ask_float('Circle radius in metres [10.0]: ', 10.0)
+    linear_speed = ask_float('Linear speed in m/s [2.0]: ', 2.0)
+    circle_laps = ask_float('Number of laps [1.0]: ', 1.0)
+
+    if radius <= 0.0:
+        print('Radius must be greater than 0. Exiting.')
+        return
+
+    if altitude <= 0.0:
+        print('Altitude must be greater than 0. Exiting.')
+        return
+
+    if linear_speed <= 0.0:
+        print('Linear speed must be greater than 0. Exiting.')
+        return
+
+    if circle_laps <= 0.0:
+        print('Number of laps must be greater than 0. Exiting.')
+        return
+
+    config = MissionConfig(
+        center_x=center_x,
+        center_y=center_y,
+        altitude=altitude,
+        radius=radius,
+        linear_speed=linear_speed,
+        circle_laps=circle_laps
+    )
+
+    print(
+        f'\nMission configured:\n'
+        f'  Centre:   ({config.center_x:.2f}, {config.center_y:.2f})\n'
+        f'  Altitude: {config.altitude:.2f} m\n'
+        f'  Radius:   {config.radius:.2f} m\n'
+        f'  Speed:    {config.linear_speed:.2f} m/s\n'
+        f'  Laps:     {config.circle_laps:.1f}\n'
+    )
+
     rclpy.init()
-    node = WaypointNavNode()
-    node.run()
-    node.destroy_node()
-    rclpy.shutdown()
+
+    node = WaypointNavNode(config)
+
+    try:
+        node.run()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':
     main()
-
-
-
