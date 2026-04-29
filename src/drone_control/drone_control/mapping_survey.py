@@ -54,23 +54,23 @@ class MappingSurveyNode(Node):
     def __init__(self):
         super().__init__('mapping_survey_node')
 
-        self.declare_parameter('x_min', -20.0)
-        self.declare_parameter('x_max', 20.0)
-        self.declare_parameter('y_min', -20.0)
-        self.declare_parameter('y_max', 20.0)
-        self.declare_parameter('strip_spacing', 5.0)
-        self.declare_parameter('altitude', 16.0)
-        self.declare_parameter('acceptance_radius', 1.5)
+        self.declare_parameter('x_min', -50.0)
+        self.declare_parameter('x_max', 50.0)
+        self.declare_parameter('y_min', -50.0)
+        self.declare_parameter('y_max', 50.0)
+        self.declare_parameter('strip_spacing', 8.0)
+        self.declare_parameter('altitude', 17.0)
+        self.declare_parameter('acceptance_radius', 2.5)
 
-        self.declare_parameter('cruise_speed', 1.0)
-        self.declare_parameter('max_horiz_speed', 1.0)
-        self.declare_parameter('max_climb_speed', 1.0)
-        self.declare_parameter('max_descent_speed', 1.0)
+        self.declare_parameter('cruise_speed', 4.0)
+        self.declare_parameter('max_horiz_speed', 5.0)
+        self.declare_parameter('max_climb_speed', 3.0)
+        self.declare_parameter('max_descent_speed', 2.0)
 
         # Yaw control
-        self.declare_parameter('yaw_rate_auto', 20.0)   # deg/s, auto-mode cap
-        self.declare_parameter('yaw_rate_max', 50.0)    # deg/s, rate-controller hard ceiling
-        self.declare_parameter('turn_duration', 4.0)    # seconds for a 180° turn
+        self.declare_parameter('yaw_rate_auto', 60.0)   # deg/s, auto-mode cap
+        self.declare_parameter('yaw_rate_max', 90.0)    # deg/s, rate-controller hard ceiling
+        self.declare_parameter('turn_duration', 2.0)    # seconds for a 180° turn
         self.declare_parameter('yaw_threshold', 0.1)    # rad; trigger ramp if delta exceeds this
 
         self.x_min = self.get_parameter('x_min').value
