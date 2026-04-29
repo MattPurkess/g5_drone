@@ -54,16 +54,16 @@ class MappingSurveyNode(Node):
     def __init__(self):
         super().__init__('mapping_survey_node')
 
-        self.declare_parameter('x_min', -50.0)
-        self.declare_parameter('x_max', 50.0)
-        self.declare_parameter('y_min', -50.0)
-        self.declare_parameter('y_max', 50.0)
+        self.declare_parameter('x_min', -40.0)
+        self.declare_parameter('x_max', 40.0)
+        self.declare_parameter('y_min', -40.0)
+        self.declare_parameter('y_max', 40.0)
         self.declare_parameter('strip_spacing', 8.0)
         self.declare_parameter('altitude', 18.0)
         self.declare_parameter('acceptance_radius', 2.5)
 
-        self.declare_parameter('cruise_speed', 4.0)
-        self.declare_parameter('max_horiz_speed', 5.0)
+        self.declare_parameter('cruise_speed', 3.0)
+        self.declare_parameter('max_horiz_speed', 3.0)
         self.declare_parameter('max_climb_speed', 3.0)
         self.declare_parameter('max_descent_speed', 2.0)
 
