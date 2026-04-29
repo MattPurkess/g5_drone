@@ -15,3 +15,7 @@
   ros__parameters:
     tf:
       send: false
+
+/mavros/obstacle:
+  ros__parameters:
+    mav_frame: "BODY_FRD"

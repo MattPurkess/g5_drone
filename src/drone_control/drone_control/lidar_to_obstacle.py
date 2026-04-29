@@ -21,7 +21,8 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from rcl_interfaces.msg import ParameterType, ParameterValue
+from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
+from rcl_interfaces.srv import SetParameters
 
 from sensor_msgs.msg import PointCloud2, LaserScan
 from mavros_msgs.msg import State
@@ -38,11 +39,11 @@ MAX_RANGE = 50.0
 
 # Only consider lidar points within this vertical band of the lidar's own
 # origin — i.e. only horizontal-ish obstacles around the drone, not floor/ceiling.
-ALTITUDE_BAND_M = 1.5
+ALTITUDE_BAND_M = 0.3
 
 CP_PARAMS = [
     ('CP_DIST', 3.0, ParameterType.PARAMETER_DOUBLE),
-    ('CP_DELAY', 0.6, ParameterType.PARAMETER_DOUBLE),
+    ('CP_DELAY', 0.2, ParameterType.PARAMETER_DOUBLE),
 ]
 
 
@@ -100,7 +101,31 @@ class LidarToObstacle(Node):
         while rclpy.ok() and not self.state.connected:
             rclpy.spin_once(self, timeout_sec=0.2)
 
+        self._set_obstacle_frame_body_frd()
         self._enable_collision_prevention()
+
+    def _set_obstacle_frame_body_frd(self):
+        client = self.create_client(SetParameters, '/mavros/obstacle/set_parameters')
+        if not client.wait_for_service(timeout_sec=10.0):
+            self.get_logger().warn(
+                '/mavros/obstacle/set_parameters not available — '
+                'mav_frame will remain at default (GLOBAL).'
+            )
+            return
+        req = SetParameters.Request()
+        p = Parameter()
+        p.name = 'mav_frame'
+        p.value.type = ParameterType.PARAMETER_STRING
+        p.value.string_value = 'BODY_FRD'
+        req.parameters = [p]
+        future = client.call_async(req)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=3.0)
+        res = future.result()
+        ok = res is not None and all(r.successful for r in res.results)
+        if ok:
+            self.get_logger().info('Set /mavros/obstacle mav_frame = BODY_FRD')
+        else:
+            self.get_logger().error('Failed to set mav_frame to BODY_FRD')
 
     def _enable_collision_prevention(self):
         client = self.create_client(ParamSetV2, '/mavros/param/set')

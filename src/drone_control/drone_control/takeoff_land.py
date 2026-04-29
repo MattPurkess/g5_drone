@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 import sys
 import tty
 import termios
@@ -11,8 +12,15 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
 from geometry_msgs.msg import PoseStamped, Twist
+from sensor_msgs.msg import LaserScan
 from mavros_msgs.msg import State
 from mavros_msgs.srv import CommandBool, SetMode
+
+
+# Block horizontal velocity if any obstacle is closer than this in the
+# commanded direction (within ±CP_CONE_DEG of the motion vector).
+CP_DIST_M = 3.0
+CP_CONE_DEG = 15.0
 
 
 class OffboardTakeoffTeleop(Node):
@@ -49,6 +57,13 @@ class OffboardTakeoffTeleop(Node):
             Twist, '/cmd_vel', self._teleop_cb, 10
         )
 
+        self.scan = None
+        self._cp_last_log_time = 0.0
+        self.scan_sub = self.create_subscription(
+            LaserScan, '/mavros/obstacle/send',
+            self._scan_cb, qos_profile_sensor_data,
+        )
+
         self.sp_pos_pub = self.create_publisher(
             PoseStamped, '/mavros/setpoint_position/local', 10
         )
@@ -81,6 +96,43 @@ class OffboardTakeoffTeleop(Node):
     def _teleop_cb(self, msg):
         self.user_cmd = msg
         self.user_cmd_time = time.time()
+
+    def _scan_cb(self, msg):
+        self.scan = msg
+
+    def _clamp_body_vel(self, vx, vy):
+        """Block (zero) the commanded horizontal velocity if any obstacle is
+        within CP_DIST_M in a ±CP_CONE_DEG cone around the motion direction.
+
+        vx, vy are in ROS body frame (x=forward, y=left). The cached scan is
+        in BODY_FRD (CW from forward), so we negate to convert.
+        """
+        scan = self.scan
+        if scan is None or not scan.ranges or scan.angle_increment <= 0:
+            return vx, vy
+        speed = math.hypot(vx, vy)
+        if speed < 0.01:
+            return vx, vy
+        angle_frd = -math.atan2(vy, vx)
+        n = len(scan.ranges)
+        center = int((angle_frd - scan.angle_min) / scan.angle_increment) % n
+        margin = max(1, int(math.radians(CP_CONE_DEG) / scan.angle_increment))
+        min_r = float('inf')
+        for j in range(-margin, margin + 1):
+            r = scan.ranges[(center + j) % n]
+            if math.isfinite(r) and r < min_r:
+                min_r = r
+        if min_r < CP_DIST_M:
+            now = time.time()
+            if now - self._cp_last_log_time >= 1.0:
+                bearing = math.degrees(angle_frd)
+                self.get_logger().warn(
+                    f'Obstacle {min_r:.2f} m at bearing {bearing:+.0f}° '
+                    f'(body) — blocking commanded velocity'
+                )
+                self._cp_last_log_time = now
+            return 0.0, 0.0
+        return vx, vy
 
     def _keyboard_loop(self):
         """Read single keypresses from the terminal to listen for arm and disarm commands"""
@@ -200,11 +252,25 @@ class OffboardTakeoffTeleop(Node):
     def _publish_vel_setpoint(self):
         out = Twist()
         if (time.time() - self.user_cmd_time) <= self.cmd_timeout:
-            out.linear.x = float(self.user_cmd.linear.y) * -1.0
-            out.linear.y = float(self.user_cmd.linear.x)
+            ux = float(self.user_cmd.linear.x)  # body forward
+            uy = float(self.user_cmd.linear.y)  # body left
+            ux, uy = self._clamp_body_vel(ux, uy)
+            # Rotate body (forward, left) → world ENU (east, north) using yaw.
+            # mavros's setpoint_velocity defaults to LOCAL_NED, expects ENU input.
+            yaw = self._current_yaw()
+            cy, sy = math.cos(yaw), math.sin(yaw)
+            out.linear.x = ux * cy - uy * sy   # east
+            out.linear.y = ux * sy + uy * cy   # north
             out.linear.z = float(self.user_cmd.linear.z)
             out.angular.z = float(self.user_cmd.angular.z)
         self.sp_vel_pub.publish(out)
+
+    def _current_yaw(self):
+        q = self.pose.pose.orientation
+        return math.atan2(
+            2.0 * (q.w * q.z + q.x * q.y),
+            1.0 - 2.0 * (q.y * q.y + q.z * q.z),
+        )
 
     def _publisher_loop(self):
         while not self._stop.is_set() and rclpy.ok():
