@@ -111,6 +111,7 @@ def generate_launch_description():
             executable='rtabmap',
             name='rtabmap',
             output='screen',
+            arguments=['--delete_db_on_start'],
             remappings=[
                 ('/rgb/image', '/x500/rgbd/image_raw'),
                 ('/rgb/camera_info', '/x500/rgbd/camera_info'),
