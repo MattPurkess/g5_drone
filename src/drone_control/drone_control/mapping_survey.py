@@ -7,9 +7,8 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import PoseStamped
 from mavros_msgs.msg import State
-from mavros_msgs.srv import CommandBool, SetMode, CommandTOL
-from rcl_interfaces.srv import SetParameters
-from rcl_interfaces.msg import Parameter, ParameterValue, ParameterType
+from mavros_msgs.srv import CommandBool, SetMode, CommandTOL, ParamSetV2
+from rcl_interfaces.msg import ParameterValue, ParameterType
 from tf_transformations import quaternion_from_euler
 
 
@@ -54,23 +53,23 @@ class MappingSurveyNode(Node):
     def __init__(self):
         super().__init__('mapping_survey_node')
 
-        self.declare_parameter('x_min', -40.0)
-        self.declare_parameter('x_max', 40.0)
-        self.declare_parameter('y_min', -40.0)
-        self.declare_parameter('y_max', 40.0)
+        self.declare_parameter('x_min', -30.0)
+        self.declare_parameter('x_max', 30.0)
+        self.declare_parameter('y_min', -30.0)
+        self.declare_parameter('y_max', 30.0)
         self.declare_parameter('strip_spacing', 8.0)
-        self.declare_parameter('altitude', 18.0)
-        self.declare_parameter('acceptance_radius', 2.5)
+        self.declare_parameter('altitude', 17.0)
+        self.declare_parameter('acceptance_radius', 1.5)
 
-        self.declare_parameter('cruise_speed', 3.0)
-        self.declare_parameter('max_horiz_speed', 3.0)
-        self.declare_parameter('max_climb_speed', 3.0)
+        self.declare_parameter('cruise_speed', 2.0)
+        self.declare_parameter('max_horiz_speed', 2.0)
+        self.declare_parameter('max_climb_speed', 2.0)
         self.declare_parameter('max_descent_speed', 2.0)
 
         # Yaw control
-        self.declare_parameter('yaw_rate_auto', 60.0)   # deg/s, auto-mode cap
-        self.declare_parameter('yaw_rate_max', 90.0)    # deg/s, rate-controller hard ceiling
-        self.declare_parameter('turn_duration', 2.0)    # seconds for a 180° turn
+        self.declare_parameter('yaw_rate_auto', 20.0)   # deg/s, auto-mode cap
+        self.declare_parameter('yaw_rate_max', 50.0)    # deg/s, rate-controller hard ceiling
+        self.declare_parameter('turn_duration', 4.0)    # seconds for a 180° turn
         self.declare_parameter('yaw_threshold', 0.1)    # rad; trigger ramp if delta exceeds this
 
         self.x_min = self.get_parameter('x_min').value
@@ -116,8 +115,7 @@ class MappingSurveyNode(Node):
         self.arming_client = self.create_client(CommandBool, '/mavros/cmd/arming')
         self.set_mode_client = self.create_client(SetMode, '/mavros/set_mode')
         self.land_client = self.create_client(CommandTOL, '/mavros/cmd/land')
-        self.param_client = self.create_client(
-            SetParameters, '/mavros/param/set_parameters')
+        self.param_client = self.create_client(ParamSetV2, '/mavros/param/set')
 
     def state_cb(self, msg):
         self.current_state = msg
@@ -156,28 +154,28 @@ class MappingSurveyNode(Node):
             name='Takeoff_Up'
         )
 
-    def set_px4_param(self, name, value):
+    def set_px4_param(self, name, value, retries=10):
         if not self.param_client.wait_for_service(timeout_sec=5.0):
             self.get_logger().warn(f'Param service unavailable, skipping {name}')
             return False
 
-        req = SetParameters.Request()
-        param = Parameter()
-        param.name = name
-        param.value = ParameterValue()
-        param.value.type = ParameterType.PARAMETER_DOUBLE
-        param.value.double_value = float(value)
-        req.parameters = [param]
+        for _ in range(retries):
+            req = ParamSetV2.Request()
+            req.force_set = True
+            req.param_id = name
+            req.value = ParameterValue()
+            req.value.type = ParameterType.PARAMETER_DOUBLE
+            req.value.double_value = float(value)
 
-        future = self.param_client.call_async(req)
-        rclpy.spin_until_future_complete(self, future, timeout_sec=3.0)
+            future = self.param_client.call_async(req)
+            rclpy.spin_until_future_complete(self, future, timeout_sec=3.0)
+            res = future.result()
+            if res is not None and res.success:
+                self.get_logger().info(f'Set {name} = {value}')
+                return True
+            time.sleep(0.5)
 
-        if future.result() and future.result().results[0].successful:
-            self.get_logger().info(f'Set {name} = {value}')
-            return True
-
-        reason = future.result().results[0].reason if future.result() else 'timeout'
-        self.get_logger().warn(f'Failed to set {name}: {reason}')
+        self.get_logger().warn(f'Failed to set {name} after {retries} retries')
         return False
 
     def apply_speed_limits(self):
