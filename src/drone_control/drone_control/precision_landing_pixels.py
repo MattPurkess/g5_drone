@@ -62,8 +62,8 @@ class PrecisionLandingNode(Node):
         self.current_pose  = PoseStamped()
         self.tag_world     = None
         self.tag_last_seen = 0.0
-        self.last_u_err    = None
-        self.last_v_err    = None
+        self.last_x_err    = None
+        self.last_y_err    = None
         self.cam_cx        = None
         self.cam_cy        = None
         self.start_time    = time.time()
@@ -92,21 +92,30 @@ class PrecisionLandingNode(Node):
     def detection_cb(self, msg: AprilTagDetectionArray):
         for det in msg.detections:
             det_id = det.id
+            
+            # 1. Explicitly check if the ID matches. If it doesn't, skip entirely.
             if isinstance(det_id, (list, tuple)):
-                match = self.target_id in det_id
+                if self.target_id not in det_id:
+                    continue  # Ignore detections with different IDs
             else:
-                match = int(det_id) == int(self.target_id)
+                if int(det_id) != int(self.target_id):
+                    continue  # Ignore detections with different IDs
 
-            if match:
-                if self.cam_cx is not None and self.cam_cy is not None:
-                    self.last_x_err = float(det.centre.x) - self.cam_cx
-                    self.last_y_err = float(det.centre.y) - self.cam_cy
-                    self.get_logger().debug(
-                        f'Detection: centre=({det.centre.x:.1f}, {det.centre.y:.1f}) '
-                        f'cam_centre=({self.cam_cx:.1f}, {self.cam_cy:.1f}) '
-                        f'err=(x={self.last_x_err:.1f}, y={self.last_y_err:.1f})'
-                    )
-                self.tag_last_seen = time.time()
+            # 2. If we reach here, it IS the correct target tag.
+            if self.cam_cx is not None and self.cam_cy is not None:
+                self.last_x_err = float(det.centre.x) - self.cam_cx
+                self.last_y_err = float(det.centre.y) - self.cam_cy
+                self.get_logger().debug(
+                    f'Detection: centre=({det.centre.x:.1f}, {det.centre.y:.1f}) '
+                    f'cam_centre=({self.cam_cx:.1f}, {self.cam_cy:.1f}) '
+                    f'err=(x={self.last_x_err:.1f}, y={self.last_y_err:.1f})'
+                )
+            
+            # Update the freshness timer
+            self.tag_last_seen = time.time()
+            
+            # 3. Stop checking other tags in this frame once we found our target
+            break
 
     def camera_info_cb(self, msg: CameraInfo):
         # Principal point in camera intrinsics matrix K.
@@ -272,3 +281,6 @@ def main(args=None):
     rclpy.init(args=args)
     PrecisionLandingNode().run()
     rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
