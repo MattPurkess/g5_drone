@@ -67,6 +67,7 @@ setup(
             'lidar_to_obstacle = drone_control.lidar_to_obstacle:main',
             'avoidance_test = drone_control.avoidance_test:main',
             'analyse_landing = drone_control.analyse_landing:main',
+            'hover = drone_control.hover:main',
         ],
     },
 )
