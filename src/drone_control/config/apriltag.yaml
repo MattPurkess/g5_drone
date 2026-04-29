@@ -12,5 +12,5 @@ apriltag_detector:
       sharpening: 0.25
       debug:      false
     tag:
-      ids:   [0]               # only detect Tag ID 0 - add more ids if added
-      sizes: [0.5]
+      ids:   [0, 1, 2]         # detect all AprilTag IDs in the world
+      sizes: [0.5, 0.5, 0.5]   # all tags are 0.5m x 0.5m

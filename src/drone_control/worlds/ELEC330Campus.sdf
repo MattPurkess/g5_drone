@@ -109,13 +109,13 @@
     <include>
       <uri>model://apriltag_landing_pad_1</uri>
       <name>landing_target_1</name>
-      <pose>1 1 0.1 0 0 0</pose>
+      <pose>1.0 1.0 0.1 0 0 0</pose>
     </include>
 
     <include>
       <uri>model://apriltag_landing_pad_2</uri>
       <name>landing_target_2</name>
-      <pose>3 -2 0.1 0 0 0</pose>
+      <pose>3.0 2.0 0.1 0 0 0</pose>
     </include>
 
     <light name="sunUTC" type="directional">
@@ -177,7 +177,7 @@
               </submesh>
             </mesh>
           </geometry>
-          <material>tree sdf for gazebo fuel model
+          <material> <!-- tree sdf for gazebo fuel model -->
             <double_sided>true</double_sided>
             <diffuse>1.0 1.0 1.0</diffuse>
             <pbr>
