@@ -59,7 +59,7 @@ class MappingSurveyNode(Node):
         self.declare_parameter('y_min', -50.0)
         self.declare_parameter('y_max', 50.0)
         self.declare_parameter('strip_spacing', 8.0)
-        self.declare_parameter('altitude', 17.0)
+        self.declare_parameter('altitude', 18.0)
         self.declare_parameter('acceptance_radius', 2.5)
 
         self.declare_parameter('cruise_speed', 4.0)
