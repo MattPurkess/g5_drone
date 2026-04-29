@@ -41,8 +41,8 @@ MAX_RANGE = 50.0
 ALTITUDE_BAND_M = 1.5
 
 CP_PARAMS = [
-    ('CP_DIST', 2.0, ParameterType.PARAMETER_DOUBLE),
-    ('CP_DELAY', 0.4, ParameterType.PARAMETER_DOUBLE),
+    ('CP_DIST', 3.0, ParameterType.PARAMETER_DOUBLE),
+    ('CP_DELAY', 0.6, ParameterType.PARAMETER_DOUBLE),
 ]
 
 
@@ -136,6 +136,9 @@ class LidarToObstacle(Node):
         # Initialize all sectors to "no obstacle" (= max range).
         ranges = [float('inf')] * NUM_SECTORS
 
+        # mavros plugin sends OBSTACLE_DISTANCE with frame=BODY_FRD; PX4 expects
+        # angles CW from forward (FRD). Lidar gives CCW from forward (ENU body),
+        # so negate atan2 to flip CCW → CW.
         for x, y, z in _read_xyz(msg):
             # In lidar_link frame: x forward, y left, z up. Filter by vertical band.
             if abs(z) > ALTITUDE_BAND_M:
@@ -143,7 +146,7 @@ class LidarToObstacle(Node):
             d = math.hypot(x, y)
             if d < MIN_RANGE or d > MAX_RANGE:
                 continue
-            angle = math.atan2(y, x)               # -pi (right) .. +pi (left)
+            angle = -math.atan2(y, x)              # CW from forward (FRD)
             sector = int((angle + math.pi) / SECTOR_WIDTH) % NUM_SECTORS
             if d < ranges[sector]:
                 ranges[sector] = d
